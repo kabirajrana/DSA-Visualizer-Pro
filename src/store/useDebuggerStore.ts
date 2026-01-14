@@ -1,10 +1,21 @@
 import { create } from 'zustand';
-import { Step, AlgorithmType, ALGORITHMS } from '@/lib/stepTypes';
+import { Step, AlgorithmType, SORTING_ALGORITHMS, SEARCHING_ALGORITHMS, ALGORITHMS } from '@/lib/stepTypes';
+import { generateBubbleSortSteps } from '@/lib/algorithms/sorting/bubbleSortSteps';
+import { generateSelectionSortSteps } from '@/lib/algorithms/sorting/selectionSortSteps';
 import { generateInsertionSortSteps } from '@/lib/algorithms/sorting/insertionSortSteps';
+import { generateMergeSortSteps } from '@/lib/algorithms/sorting/mergeSortSteps';
+import { generateQuickSortSteps } from '@/lib/algorithms/sorting/quickSortSteps';
+import { generateHeapSortSteps } from '@/lib/algorithms/sorting/heapSortSteps';
+import { generateLinearSearchSteps } from '@/lib/algorithms/searching/linearSearchSteps';
 import { generateBinarySearchSteps } from '@/lib/algorithms/searching/binarySearchSteps';
+import { generateJumpSearchSteps } from '@/lib/algorithms/searching/jumpSearchSteps';
+import { generateInterpolationSearchSteps } from '@/lib/algorithms/searching/interpolationSearchSteps';
+
+export type CategoryTab = 'sorting' | 'searching';
 
 interface DebuggerState {
-  // Algorithm settings
+  // Category and algorithm settings
+  category: CategoryTab;
   algorithm: AlgorithmType;
   arrayInput: string;
   targetInput: string;
@@ -14,12 +25,13 @@ interface DebuggerState {
   steps: Step[];
   currentStepIndex: number;
   isPlaying: boolean;
-  playbackSpeed: number; // ms per step
+  playbackSpeed: number;
   
   // View mode
   viewMode: 'pictorial' | 'focus';
   
   // Actions
+  setCategory: (category: CategoryTab) => void;
   setAlgorithm: (algorithm: AlgorithmType) => void;
   setArrayInput: (input: string) => void;
   setTargetInput: (input: string) => void;
@@ -44,7 +56,8 @@ const DEFAULT_ARRAY = '23,1,10,5,2,7,15';
 const DEFAULT_TARGET = '10';
 
 export const useDebuggerStore = create<DebuggerState>((set, get) => ({
-  algorithm: 'insertion-sort',
+  category: 'sorting',
+  algorithm: 'bubble-sort',
   arrayInput: DEFAULT_ARRAY,
   targetInput: DEFAULT_TARGET,
   arraySize: 7,
@@ -53,6 +66,13 @@ export const useDebuggerStore = create<DebuggerState>((set, get) => ({
   isPlaying: false,
   playbackSpeed: 1000,
   viewMode: 'pictorial',
+
+  setCategory: (category) => {
+    const defaultAlgo = category === 'sorting' 
+      ? SORTING_ALGORITHMS[0].id 
+      : SEARCHING_ALGORITHMS[0].id;
+    set({ category, algorithm: defaultAlgo, steps: [], currentStepIndex: 0, isPlaying: false });
+  },
 
   setAlgorithm: (algorithm) => {
     set({ algorithm, steps: [], currentStepIndex: 0, isPlaying: false });
@@ -84,11 +104,41 @@ export const useDebuggerStore = create<DebuggerState>((set, get) => ({
 
     let steps: Step[] = [];
     
-    if (algorithm === 'insertion-sort') {
-      steps = generateInsertionSortSteps(arr);
-    } else if (algorithm === 'binary-search') {
-      const target = parseInt(targetInput, 10) || arr[0];
-      steps = generateBinarySearchSteps(arr, target);
+    switch (algorithm) {
+      case 'bubble-sort':
+        steps = generateBubbleSortSteps(arr);
+        break;
+      case 'selection-sort':
+        steps = generateSelectionSortSteps(arr);
+        break;
+      case 'insertion-sort':
+        steps = generateInsertionSortSteps(arr);
+        break;
+      case 'merge-sort':
+        steps = generateMergeSortSteps(arr);
+        break;
+      case 'quick-sort':
+        steps = generateQuickSortSteps(arr);
+        break;
+      case 'heap-sort':
+        steps = generateHeapSortSteps(arr);
+        break;
+      case 'linear-search':
+        const linearTarget = parseInt(targetInput, 10) || arr[0];
+        steps = generateLinearSearchSteps(arr, linearTarget);
+        break;
+      case 'binary-search':
+        const binaryTarget = parseInt(targetInput, 10) || arr[0];
+        steps = generateBinarySearchSteps(arr, binaryTarget);
+        break;
+      case 'jump-search':
+        const jumpTarget = parseInt(targetInput, 10) || arr[0];
+        steps = generateJumpSearchSteps(arr, jumpTarget);
+        break;
+      case 'interpolation-search':
+        const interpTarget = parseInt(targetInput, 10) || arr[0];
+        steps = generateInterpolationSearchSteps(arr, interpTarget);
+        break;
     }
 
     set({ steps, currentStepIndex: 0, isPlaying: false });

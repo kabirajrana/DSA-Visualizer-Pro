@@ -1,12 +1,11 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRightLeft, Search, Info, Bug, Menu, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRightLeft, Search, Info, Bug, Menu } from 'lucide-react';
 import { Controls } from '@/components/Controls';
 import { PictorialVisualizer } from '@/components/PictorialVisualizer';
 import { DebuggerPanel } from '@/components/DebuggerPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Index: React.FC = () => {
@@ -15,8 +14,7 @@ const Index: React.FC = () => {
   const [mobileDebuggerOpen, setMobileDebuggerOpen] = React.useState(false);
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
         {/* Header */}
         <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
           <div className="container mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2">
@@ -153,8 +151,7 @@ const Index: React.FC = () => {
             </span>
           </div>
         </footer>
-      </div>
-    </TooltipProvider>
+    </div>
   );
 };
 

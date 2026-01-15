@@ -1,74 +1,89 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Info, BarChart3, Clock } from 'lucide-react';
+import { Code2, BarChart3, Clock, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
-import { PSEUDOCODE, CODE_LINE_MAPPING } from '@/lib/pseudocode';
+import { ALGORITHM_CODE } from '@/lib/algorithmCode';
 import { ALGORITHMS } from '@/lib/stepTypes';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const DebuggerPanel: React.FC = () => {
   const { algorithm, steps, currentStepIndex } = useDebuggerStore();
+  const [isCodeVisible, setIsCodeVisible] = useState(true);
 
   const currentStep = steps[currentStepIndex];
-  const pseudocode = PSEUDOCODE[algorithm];
+  const algorithmCode = ALGORITHM_CODE[algorithm];
   const algorithmInfo = ALGORITHMS.find(a => a.id === algorithm);
-  const activeLine = currentStep ? CODE_LINE_MAPPING[algorithm][currentStep.codeLine] ?? -1 : -1;
 
   return (
-    <div className="panel h-full flex flex-col">
+    <div className="panel h-full flex flex-col overflow-hidden">
       <div className="panel-header">
         <span className="panel-title">Debugger</span>
         <Code2 className="w-4 h-4 text-primary" />
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {/* Pseudocode */}
-        <div className="border-b border-border">
-          <div className="px-4 py-2 bg-muted/30 flex items-center gap-2">
-            <Code2 className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pseudocode</span>
-          </div>
-          <div className="py-2 font-mono text-sm bg-background/50">
-            {pseudocode.map((line) => (
-              <motion.div
-                key={line.line}
-                className={`code-line ${activeLine === line.line ? 'code-line-active' : ''}`}
-                style={{ paddingLeft: `${1 + line.indent * 1.5}rem` }}
-                animate={{
-                  backgroundColor: activeLine === line.line ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-                }}
-              >
-                <span className="text-muted-foreground mr-3 select-none w-4 inline-block">
-                  {line.line + 1}
-                </span>
-                <span className={activeLine === line.line ? 'text-primary' : 'text-foreground'}>
-                  {line.code}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        {/* Algorithm Code (Collapsible) */}
+        <Collapsible open={isCodeVisible} onOpenChange={setIsCodeVisible}>
+          <CollapsibleTrigger className="collapsible-trigger">
+            <div className="flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Algorithm Code
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {isCodeVisible ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </>
+              )}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="bg-muted/30 border-b border-border">
+              <pre className="p-3 font-mono text-[10px] md:text-xs leading-relaxed overflow-x-auto scrollbar-thin text-foreground/90">
+                <code>{algorithmCode}</code>
+              </pre>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-        {/* Step Explanation */}
-        <div className="border-b border-border">
-          <div className="px-4 py-2 bg-muted/30 flex items-center gap-2">
-            <Info className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Explanation</span>
+        {/* Step Explanation - Always Visible & Prominent */}
+        <div className="border-b border-border bg-primary/5">
+          <div className="px-4 py-2 bg-primary/10 flex items-center gap-2">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+              💡 Current Step
+            </span>
+            {currentStep && (
+              <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                {currentStepIndex + 1} / {steps.length}
+              </span>
+            )}
           </div>
           <div className="p-4">
             <AnimatePresence mode="wait">
               {currentStep ? (
-                <motion.p
+                <motion.div
                   key={currentStepIndex}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="text-sm text-foreground leading-relaxed"
+                  className="space-y-2"
                 >
-                  {currentStep.explanation}
-                </motion.p>
+                  <p className="text-sm font-medium text-primary">{currentStep.label}</p>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {currentStep.explanation}
+                  </p>
+                </motion.div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Generate steps to see explanations.
+                  Click "Generate Steps" to see explanations.
                 </p>
               )}
             </AnimatePresence>
@@ -81,7 +96,7 @@ export const DebuggerPanel: React.FC = () => {
             <div className="px-4 py-2 bg-muted/30 flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Variables</span>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-3">
+            <div className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
               <AnimatePresence mode="popLayout">
                 {Object.entries(currentStep.pointers).map(([name, value]) => (
                   <motion.div
@@ -92,8 +107,8 @@ export const DebuggerPanel: React.FC = () => {
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="p-2 rounded-lg bg-secondary/50 border border-border"
                   >
-                    <span className="text-xs text-muted-foreground font-mono">{name}</span>
-                    <p className="text-lg font-mono font-bold text-primary">
+                    <span className="text-[10px] text-muted-foreground font-mono">{name}</span>
+                    <p className="text-base md:text-lg font-mono font-bold text-primary">
                       {value !== null ? value : '—'}
                     </p>
                   </motion.div>
@@ -110,8 +125,8 @@ export const DebuggerPanel: React.FC = () => {
               <BarChart3 className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Metrics</span>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-3">
-              <div className="text-center p-3 rounded-lg bg-compare/10 border border-compare/30">
+            <div className="p-3 grid grid-cols-3 gap-2">
+              <div className="text-center p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                 <motion.p
                   key={`comp-${currentStep.metrics.comparisons}`}
                   initial={{ scale: 1.2 }}
@@ -122,7 +137,7 @@ export const DebuggerPanel: React.FC = () => {
                 </motion.p>
                 <span className="metric-label">Comparisons</span>
               </div>
-              <div className="text-center p-3 rounded-lg bg-swap/10 border border-swap/30">
+              <div className="text-center p-2 rounded-lg bg-red-500/10 border border-red-500/30">
                 <motion.p
                   key={`swap-${currentStep.metrics.swaps}`}
                   initial={{ scale: 1.2 }}
@@ -133,7 +148,7 @@ export const DebuggerPanel: React.FC = () => {
                 </motion.p>
                 <span className="metric-label">Swaps</span>
               </div>
-              <div className="text-center p-3 rounded-lg bg-primary/10 border border-primary/30">
+              <div className="text-center p-2 rounded-lg bg-primary/10 border border-primary/30">
                 <motion.p
                   key={`pass-${currentStep.metrics.passes}`}
                   initial={{ scale: 1.2 }}
@@ -155,22 +170,22 @@ export const DebuggerPanel: React.FC = () => {
               <Clock className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Complexity</span>
             </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Time (Best)</span>
-                <span className="font-mono text-sm text-sorted">{algorithmInfo.timeComplexity.best}</span>
+            <div className="p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Time (Best)</span>
+                <span className="font-mono text-sorted">{algorithmInfo.timeComplexity.best}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Time (Average)</span>
-                <span className="font-mono text-sm text-compare">{algorithmInfo.timeComplexity.average}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Time (Average)</span>
+                <span className="font-mono text-compare">{algorithmInfo.timeComplexity.average}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Time (Worst)</span>
-                <span className="font-mono text-sm text-swap">{algorithmInfo.timeComplexity.worst}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Time (Worst)</span>
+                <span className="font-mono text-swap">{algorithmInfo.timeComplexity.worst}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Space</span>
-                <span className="font-mono text-sm text-primary">{algorithmInfo.spaceComplexity}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Space</span>
+                <span className="font-mono text-primary">{algorithmInfo.spaceComplexity}</span>
               </div>
             </div>
           </div>

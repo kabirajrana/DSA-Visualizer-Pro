@@ -69,6 +69,8 @@ export default {
         found: "hsl(var(--found))",
         shift: "hsl(var(--shift))",
         pointer: "hsl(var(--pointer))",
+        pivot: "hsl(var(--pivot))",
+        eliminated: "hsl(var(--eliminated))",
       },
       borderRadius: {
         lg: "var(--radius)",

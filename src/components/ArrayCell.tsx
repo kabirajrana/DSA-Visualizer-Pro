@@ -185,26 +185,21 @@ export const ArrayCell: React.FC<ArrayCellProps> = ({ value, index, highlights, 
 
   return (
     <div className="relative">
-      {/* Pointer labels */}
+      {/* Pointer labels - fixed positioning for mobile stability */}
       {activePointers.length > 0 && !isSmall && (
-        <motion.div 
-          className="absolute -top-7 md:-top-9 left-1/2 -translate-x-1/2 flex gap-0.5 z-10" 
-          initial={{ opacity: 0, y: 5 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          exit={{ opacity: 0, y: 5 }}
+        <div 
+          className="absolute -top-6 md:-top-8 left-1/2 -translate-x-1/2 flex gap-0.5 z-10"
+          style={{ transform: 'translateX(-50%)', willChange: 'auto' }}
         >
           {activePointers.map((name) => (
-            <motion.span 
+            <span 
               key={name} 
-              className={`px-1.5 py-0.5 rounded text-[8px] md:text-[10px] font-mono font-bold shadow-lg ${getPointerColor(name)}`} 
-              layoutId={layoutId ? `pointer-${name}-${layoutId}` : undefined}
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
+              className={`px-1.5 py-0.5 rounded text-[8px] md:text-[10px] font-mono font-bold shadow-lg ${getPointerColor(name)}`}
             >
               {name}
-            </motion.span>
+            </span>
           ))}
-        </motion.div>
+        </div>
       )}
       
       {/* Cell with enhanced animations */}

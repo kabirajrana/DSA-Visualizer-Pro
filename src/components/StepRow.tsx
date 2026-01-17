@@ -35,8 +35,8 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
             : 'bg-card/30 border border-transparent'
       }`}
     >
-      {/* Step indicator */}
-      <div className="flex items-center gap-3 w-full md:w-auto">
+      {/* Step indicator - always visible info */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <div className={`shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-xs md:text-sm font-bold ${
           isActive 
             ? 'bg-primary text-primary-foreground' 
@@ -47,11 +47,20 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
           {isPast ? <Check className="w-4 h-4" /> : stepNumber}
         </div>
         
-        <div className="flex-1 md:w-24 md:flex-initial">
-          <span className={`text-[10px] md:text-xs font-mono ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-            Step {stepNumber}
-          </span>
-          <p className={`text-xs md:text-sm font-medium truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+        <div className="min-w-0 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] md:text-xs font-mono whitespace-nowrap ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+              Step {stepNumber}
+            </span>
+            {step.metrics.passes > 0 && (
+              <span className={`text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                isActive ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'
+              }`}>
+                Pass {step.metrics.passes}
+              </span>
+            )}
+          </div>
+          <p className={`text-xs md:text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
             {step.label}
           </p>
         </div>

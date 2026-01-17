@@ -125,39 +125,45 @@ export const DebuggerPanel: React.FC = () => {
               <BarChart3 className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Metrics</span>
             </div>
-            <div className="p-3 grid grid-cols-3 gap-2">
-              <div className="text-center p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+            <div className="p-3 grid grid-cols-3 gap-1 sm:gap-2">
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 min-w-0">
                 <motion.p
                   key={`comp-${currentStep.metrics.comparisons}`}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
-                  className="metric-value text-compare"
+                  className="text-base sm:text-lg md:text-2xl font-mono font-bold text-compare"
                 >
                   {currentStep.metrics.comparisons}
                 </motion.p>
-                <span className="metric-label">Comparisons</span>
+                <span className="block text-[8px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider truncate">
+                  Comps
+                </span>
               </div>
-              <div className="text-center p-2 rounded-lg bg-red-500/10 border border-red-500/30">
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-red-500/10 border border-red-500/30 min-w-0">
                 <motion.p
                   key={`swap-${currentStep.metrics.swaps}`}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
-                  className="metric-value text-swap"
+                  className="text-base sm:text-lg md:text-2xl font-mono font-bold text-swap"
                 >
                   {currentStep.metrics.swaps}
                 </motion.p>
-                <span className="metric-label">Swaps</span>
+                <span className="block text-[8px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider truncate">
+                  Swaps
+                </span>
               </div>
-              <div className="text-center p-2 rounded-lg bg-primary/10 border border-primary/30">
+              <div className="text-center p-1.5 sm:p-2 rounded-lg bg-primary/10 border border-primary/30 min-w-0">
                 <motion.p
                   key={`pass-${currentStep.metrics.passes}`}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
-                  className="metric-value"
+                  className="text-base sm:text-lg md:text-2xl font-mono font-bold text-primary"
                 >
                   {currentStep.metrics.passes}
                 </motion.p>
-                <span className="metric-label">Passes</span>
+                <span className="block text-[8px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider truncate">
+                  Passes
+                </span>
               </div>
             </div>
           </div>

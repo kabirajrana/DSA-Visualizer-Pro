@@ -1,225 +1,204 @@
 import { AlgorithmType } from './stepTypes';
 
 export const ALGORITHM_CODE: Record<AlgorithmType, string> = {
-  'bubble-sort': `function bubbleSort(arr) {
-  const n = arr.length;
-  
-  for (let i = 0; i < n - 1; i++) {
-    // Flag to optimize if no swaps occur
-    let swapped = false;
+  'bubble-sort': `def bubble_sort(arr):
+    n = len(arr)
     
-    for (let j = 0; j < n - i - 1; j++) {
-      // Compare adjacent elements
-      if (arr[j] > arr[j + 1]) {
-        // Swap if they are in wrong order
-        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-        swapped = true;
-      }
-    }
+    for i in range(n - 1):
+        # Flag to optimize if no swaps occur
+        swapped = False
+        
+        for j in range(n - i - 1):
+            # Compare adjacent elements
+            if arr[j] > arr[j + 1]:
+                # Swap if they are in wrong order
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        
+        # If no swaps, array is sorted
+        if not swapped:
+            break
     
-    // If no swaps, array is sorted
-    if (!swapped) break;
-  }
-  
-  return arr;
-}`,
+    return arr`,
 
-  'selection-sort': `function selectionSort(arr) {
-  const n = arr.length;
-  
-  for (let i = 0; i < n - 1; i++) {
-    // Find the minimum element
-    let minIdx = i;
+  'selection-sort': `def selection_sort(arr):
+    n = len(arr)
     
-    for (let j = i + 1; j < n; j++) {
-      if (arr[j] < arr[minIdx]) {
-        minIdx = j;
-      }
-    }
+    for i in range(n - 1):
+        # Find the minimum element
+        min_idx = i
+        
+        for j in range(i + 1, n):
+            if arr[j] < arr[min_idx]:
+                min_idx = j
+        
+        # Swap minimum with first unsorted
+        if min_idx != i:
+            arr[i], arr[min_idx] = arr[min_idx], arr[i]
     
-    // Swap minimum with first unsorted
-    if (minIdx !== i) {
-      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
-    }
-  }
-  
-  return arr;
-}`,
+    return arr`,
 
-  'insertion-sort': `function insertionSort(arr) {
-  const n = arr.length;
-  
-  for (let i = 1; i < n; i++) {
-    // Store the current element as key
-    const key = arr[i];
-    let j = i - 1;
+  'insertion-sort': `def insertion_sort(arr):
+    n = len(arr)
     
-    // Shift elements greater than key
-    while (j >= 0 && arr[j] > key) {
-      arr[j + 1] = arr[j];
-      j--;
-    }
+    for i in range(1, n):
+        # Store the current element as key
+        key = arr[i]
+        j = i - 1
+        
+        # Shift elements greater than key
+        while j >= 0 and arr[j] > key:
+            arr[j + 1] = arr[j]
+            j -= 1
+        
+        # Insert key at correct position
+        arr[j + 1] = key
     
-    // Insert key at correct position
-    arr[j + 1] = key;
-  }
-  
-  return arr;
-}`,
+    return arr`,
 
-  'merge-sort': `function mergeSort(arr) {
-  if (arr.length <= 1) return arr;
-  
-  const mid = Math.floor(arr.length / 2);
-  const left = mergeSort(arr.slice(0, mid));
-  const right = mergeSort(arr.slice(mid));
-  
-  return merge(left, right);
-}
-
-function merge(left, right) {
-  const result = [];
-  let i = 0, j = 0;
-  
-  while (i < left.length && j < right.length) {
-    if (left[i] <= right[j]) {
-      result.push(left[i++]);
-    } else {
-      result.push(right[j++]);
-    }
-  }
-  
-  return [...result, ...left.slice(i), ...right.slice(j)];
-}`,
-
-  'quick-sort': `function quickSort(arr, low = 0, high = arr.length - 1) {
-  if (low < high) {
-    const pivotIdx = partition(arr, low, high);
-    quickSort(arr, low, pivotIdx - 1);
-    quickSort(arr, pivotIdx + 1, high);
-  }
-  return arr;
-}
-
-function partition(arr, low, high) {
-  const pivot = arr[high];
-  let i = low - 1;
-  
-  for (let j = low; j < high; j++) {
-    if (arr[j] <= pivot) {
-      i++;
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-  }
-  
-  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-  return i + 1;
-}`,
-
-  'heap-sort': `function heapSort(arr) {
-  const n = arr.length;
-  
-  // Build max heap
-  for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-    heapify(arr, n, i);
-  }
-  
-  // Extract elements from heap
-  for (let i = n - 1; i > 0; i--) {
-    [arr[0], arr[i]] = [arr[i], arr[0]];
-    heapify(arr, i, 0);
-  }
-  
-  return arr;
-}
-
-function heapify(arr, n, i) {
-  let largest = i;
-  const left = 2 * i + 1;
-  const right = 2 * i + 2;
-  
-  if (left < n && arr[left] > arr[largest]) largest = left;
-  if (right < n && arr[right] > arr[largest]) largest = right;
-  
-  if (largest !== i) {
-    [arr[i], arr[largest]] = [arr[largest], arr[i]];
-    heapify(arr, n, largest);
-  }
-}`,
-
-  'linear-search': `function linearSearch(arr, target) {
-  for (let i = 0; i < arr.length; i++) {
-    // Check each element sequentially
-    if (arr[i] === target) {
-      return i; // Found at index i
-    }
-  }
-  
-  return -1; // Not found
-}`,
-
-  'binary-search': `function binarySearch(arr, target) {
-  let low = 0;
-  let high = arr.length - 1;
-  
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
+  'merge-sort': `def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
     
-    if (arr[mid] === target) {
-      return mid; // Found!
-    } else if (arr[mid] < target) {
-      low = mid + 1; // Search right half
-    } else {
-      high = mid - 1; // Search left half
-    }
-  }
-  
-  return -1; // Not found
-}`,
-
-  'jump-search': `function jumpSearch(arr, target) {
-  const n = arr.length;
-  const step = Math.floor(Math.sqrt(n));
-  
-  let prev = 0;
-  let curr = step;
-  
-  // Jump through blocks
-  while (curr < n && arr[curr] < target) {
-    prev = curr;
-    curr += step;
-  }
-  
-  // Linear search in block
-  for (let i = prev; i <= Math.min(curr, n - 1); i++) {
-    if (arr[i] === target) {
-      return i;
-    }
-  }
-  
-  return -1;
-}`,
-
-  'interpolation-search': `function interpolationSearch(arr, target) {
-  let low = 0;
-  let high = arr.length - 1;
-  
-  while (low <= high && target >= arr[low] && target <= arr[high]) {
-    // Calculate probe position
-    const pos = low + Math.floor(
-      ((target - arr[low]) * (high - low)) / 
-      (arr[high] - arr[low])
-    );
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
     
-    if (arr[pos] === target) {
-      return pos;
-    } else if (arr[pos] < target) {
-      low = pos + 1;
-    } else {
-      high = pos - 1;
-    }
-  }
-  
-  return -1;
-}`,
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result`,
+
+  'quick-sort': `def quick_sort(arr, low=0, high=None):
+    if high is None:
+        high = len(arr) - 1
+    
+    if low < high:
+        pivot_idx = partition(arr, low, high)
+        quick_sort(arr, low, pivot_idx - 1)
+        quick_sort(arr, pivot_idx + 1, high)
+    
+    return arr
+
+def partition(arr, low, high):
+    pivot = arr[high]
+    i = low - 1
+    
+    for j in range(low, high):
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+    
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    return i + 1`,
+
+  'heap-sort': `def heap_sort(arr):
+    n = len(arr)
+    
+    # Build max heap
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(arr, n, i)
+    
+    # Extract elements from heap
+    for i in range(n - 1, 0, -1):
+        arr[0], arr[i] = arr[i], arr[0]
+        heapify(arr, i, 0)
+    
+    return arr
+
+def heapify(arr, n, i):
+    largest = i
+    left = 2 * i + 1
+    right = 2 * i + 2
+    
+    if left < n and arr[left] > arr[largest]:
+        largest = left
+    if right < n and arr[right] > arr[largest]:
+        largest = right
+    
+    if largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]
+        heapify(arr, n, largest)`,
+
+  'linear-search': `def linear_search(arr, target):
+    for i in range(len(arr)):
+        # Check each element sequentially
+        if arr[i] == target:
+            return i  # Found at index i
+    
+    return -1  # Not found`,
+
+  'binary-search': `def binary_search(arr, target):
+    low = 0
+    high = len(arr) - 1
+    
+    while low <= high:
+        mid = (low + high) // 2
+        
+        if arr[mid] == target:
+            return mid  # Found!
+        elif arr[mid] < target:
+            low = mid + 1  # Search right half
+        else:
+            high = mid - 1  # Search left half
+    
+    return -1  # Not found`,
+
+  'jump-search': `def jump_search(arr, target):
+    import math
+    n = len(arr)
+    step = int(math.sqrt(n))
+    
+    prev = 0
+    curr = step
+    
+    # Jump through blocks
+    while curr < n and arr[curr] < target:
+        prev = curr
+        curr += step
+    
+    # Linear search in block
+    for i in range(prev, min(curr + 1, n)):
+        if arr[i] == target:
+            return i
+    
+    return -1`,
+
+  'interpolation-search': `def interpolation_search(arr, target):
+    low = 0
+    high = len(arr) - 1
+    
+    while low <= high and target >= arr[low] and target <= arr[high]:
+        # Calculate probe position
+        if arr[high] == arr[low]:
+            if arr[low] == target:
+                return low
+            break
+        
+        pos = low + int(
+            ((target - arr[low]) * (high - low)) /
+            (arr[high] - arr[low])
+        )
+        
+        if arr[pos] == target:
+            return pos
+        elif arr[pos] < target:
+            low = pos + 1
+        else:
+            high = pos - 1
+    
+    return -1`,
 };

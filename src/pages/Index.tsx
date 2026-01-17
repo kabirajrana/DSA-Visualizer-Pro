@@ -177,7 +177,7 @@ const Index: React.FC = () => {
           <div className="container mx-auto px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Created by <span className="font-semibold text-foreground">Kabiraj</span></span>
             <span>•</span>
-            <span>Built with React, Zustand & Framer Motion</span>
+            <span>© 2026 All Rights Reserved</span>
             <span>•</span>
             <span className={category === 'sorting' ? 'text-primary' : 'text-sorted'}>
               {category === 'sorting' ? '6 Sorting' : '4 Searching'} Algorithms

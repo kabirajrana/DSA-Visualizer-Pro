@@ -13,8 +13,8 @@ interface StepRowProps {
   showArrows?: boolean;
 }
 
-const CELL_WIDTH = 40;
-const CELL_GAP = 6;
+const CELL_WIDTH = 36;
+const CELL_GAP = 4;
 
 export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, isPast = false, showArrows = true }) => {
   return (
@@ -27,7 +27,7 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
         scale: isActive ? 1 : 0.97,
       }}
       exit={{ opacity: 0, x: 20 }}
-      className={`relative flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 p-3 md:p-4 rounded-lg transition-all ${
+      className={`relative p-2 md:p-3 rounded-lg transition-all ${
         isActive 
           ? 'bg-card border-2 border-primary/40 shadow-lg' 
           : isPast 
@@ -35,41 +35,43 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
             : 'bg-card/30 border border-transparent'
       }`}
     >
-      {/* Step indicator - always visible info */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <div className={`shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-xs md:text-sm font-bold ${
+      {/* Step header - always visible, no horizontal scroll */}
+      <div className="flex items-center gap-2 mb-2">
+        {/* Step number badge */}
+        <div className={`shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold ${
           isActive 
             ? 'bg-primary text-primary-foreground' 
             : isPast 
               ? 'bg-sorted/20 text-sorted border border-sorted/40' 
               : 'bg-secondary text-muted-foreground'
         }`}>
-          {isPast ? <Check className="w-4 h-4" /> : stepNumber}
+          {isPast ? <Check className="w-3 h-3" /> : stepNumber}
         </div>
         
-        <div className="min-w-0 shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] md:text-xs font-mono whitespace-nowrap ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-              Step {stepNumber}
+        {/* Step info - compact layout */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-[10px] font-mono ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+              S{stepNumber}
             </span>
             {step.metrics.passes > 0 && (
-              <span className={`text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
+              <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${
                 isActive ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'
               }`}>
-                Pass {step.metrics.passes}
+                P{step.metrics.passes}
               </span>
             )}
           </div>
-          <p className={`text-xs md:text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+          <p className={`text-[11px] md:text-xs font-medium truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
             {step.label}
           </p>
         </div>
       </div>
 
-      {/* Arrays container */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-4 w-full md:w-auto overflow-x-auto scrollbar-thin pb-2">
+      {/* Arrays - responsive with wrapping, NO horizontal scroll */}
+      <div className="flex flex-wrap items-center gap-2">
         {/* Before Array */}
-        <div className="relative flex items-center gap-1 md:gap-2 pb-5 md:pb-6 shrink-0">
+        <div className="relative flex items-center gap-0.5 md:gap-1 pb-4 md:pb-5">
           <AnimatePresence mode="popLayout">
             {step.before.map((value, index) => (
               <ArrayCell
@@ -104,11 +106,11 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
           animate={{ opacity: isActive ? 1 : 0.3 }}
           className="text-muted-foreground shrink-0"
         >
-          <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+          <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
         </motion.div>
 
         {/* After Array */}
-        <div className="relative flex items-center gap-1 md:gap-2 pb-5 md:pb-6 shrink-0">
+        <div className="relative flex items-center gap-0.5 md:gap-1 pb-4 md:pb-5">
           <AnimatePresence mode="popLayout">
             {step.after.map((value, index) => (
               <ArrayCell
@@ -125,14 +127,14 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
         </div>
       </div>
 
-      {/* Compact explanation for non-active past steps */}
-      {isPast && !isActive && (
+      {/* Compact explanation for active step */}
+      {isActive && (
         <motion.p 
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          className="text-[10px] md:text-xs text-muted-foreground italic md:ml-auto md:max-w-[200px] truncate"
+          animate={{ opacity: 1 }}
+          className="text-[10px] md:text-xs text-muted-foreground mt-1 line-clamp-2"
         >
-          {step.explanation.slice(0, 50)}...
+          {step.explanation}
         </motion.p>
       )}
     </motion.div>

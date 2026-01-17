@@ -18,15 +18,15 @@ const Index: React.FC = () => {
         {/* Header - fixed */}
         <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md z-50">
           <div className="container mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2">
-            {/* Mobile Controls Toggle */}
+            {/* Mobile Controls Toggle - sheet opens from bottom */}
             <Sheet open={mobileControlsOpen} onOpenChange={setMobileControlsOpen}>
               <SheetTrigger asChild>
                 <button className="lg:hidden p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] p-0">
-                <div className="h-full overflow-y-auto">
+              <SheetContent side="bottom" className="h-[70vh] p-0 rounded-t-2xl">
+                <div className="h-full overflow-y-auto pt-4">
                   <Controls />
                 </div>
               </SheetContent>

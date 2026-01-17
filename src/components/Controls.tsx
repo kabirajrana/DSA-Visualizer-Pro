@@ -120,10 +120,16 @@ export const Controls: React.FC = () => {
           </div>
         )}
 
-        {/* Generate Button */}
-        <Button onClick={generateSteps} className="w-full h-10 md:h-12 text-sm md:text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 glow-primary">
-          Generate Steps
-        </Button>
+        {/* Generate & Reset Buttons */}
+        <div className="flex gap-2">
+          <Button onClick={generateSteps} className="flex-1 h-10 md:h-12 text-sm md:text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 glow-primary">
+            Generate Steps
+          </Button>
+          <Button onClick={reset} variant="outline" className="h-10 md:h-12 px-4 text-sm md:text-base font-semibold">
+            <RotateCcw className="w-4 h-4 mr-1" />
+            Reset
+          </Button>
+        </div>
 
         {/* Playback Controls */}
         {hasSteps && (

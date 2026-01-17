@@ -14,9 +14,9 @@ const Index: React.FC = () => {
   const [mobileDebuggerOpen, setMobileDebuggerOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+        {/* Header - fixed */}
+        <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md z-50">
           <div className="container mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2">
             {/* Mobile Controls Toggle */}
             <Sheet open={mobileControlsOpen} onOpenChange={setMobileControlsOpen}>
@@ -80,11 +80,11 @@ const Index: React.FC = () => {
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content - fills remaining height */}
         <main className="flex-1 container mx-auto p-2 md:p-4 flex flex-col lg:flex-row gap-3 md:gap-4 min-h-0 overflow-hidden">
-          {/* Left Panel - Controls (hidden on mobile, shown in sheet) */}
+          {/* Left Panel - Controls (fixed, no scroll) */}
           <motion.aside 
-            className="hidden lg:block lg:w-72 xl:w-80 shrink-0" 
+            className="hidden lg:flex lg:flex-col lg:w-72 xl:w-80 shrink-0 max-h-full overflow-y-auto" 
             initial={{ opacity: 0, x: -20 }} 
             animate={{ opacity: 1, x: 0 }} 
             transition={{ delay: 0.1 }}
@@ -92,9 +92,9 @@ const Index: React.FC = () => {
             <Controls />
           </motion.aside>
 
-          {/* Center Panel - Visualizer */}
+          {/* Center Panel - Visualizer (only this section scrolls internally) */}
           <motion.section 
-            className="flex-1 panel min-w-0 min-h-[400px] lg:min-h-0" 
+            className="flex-1 panel min-w-0 min-h-0 overflow-hidden" 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ delay: 0.2 }}
@@ -102,9 +102,9 @@ const Index: React.FC = () => {
             <PictorialVisualizer />
           </motion.section>
 
-          {/* Right Panel - Debugger (hidden on mobile, shown in sheet) */}
+          {/* Right Panel - Debugger (fixed, no page scroll) */}
           <motion.aside 
-            className="hidden lg:block lg:w-72 xl:w-80 shrink-0" 
+            className="hidden lg:flex lg:flex-col lg:w-72 xl:w-80 shrink-0 max-h-full overflow-y-auto" 
             initial={{ opacity: 0, x: 20 }} 
             animate={{ opacity: 1, x: 0 }} 
             transition={{ delay: 0.3 }}

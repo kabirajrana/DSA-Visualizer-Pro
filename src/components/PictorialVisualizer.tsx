@@ -37,12 +37,21 @@ export const PictorialVisualizer: React.FC = () => {
     setAnimatingStepIndex(currentStepIndex);
   }, [currentStepIndex]);
 
-  // Auto-scroll to current step in pictorial mode
+  // Auto-scroll to current step in pictorial mode (only scroll the visualizer, not the whole page)
   useEffect(() => {
     if (viewMode === 'pictorial' && containerRef.current) {
-      const activeRow = containerRef.current.querySelector(`[data-step="${currentStepIndex}"]`);
+      const activeRow = containerRef.current.querySelector(`[data-step="${currentStepIndex}"]`) as HTMLElement;
       if (activeRow) {
-        activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Use scrollTop on container instead of scrollIntoView to prevent parent layout shifts
+        const container = containerRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const rowRect = activeRow.getBoundingClientRect();
+        const scrollTop = container.scrollTop + (rowRect.top - containerRect.top) - (containerRect.height / 2) + (rowRect.height / 2);
+        
+        container.scrollTo({
+          top: Math.max(0, scrollTop),
+          behavior: 'smooth'
+        });
       }
     }
   }, [currentStepIndex, viewMode]);

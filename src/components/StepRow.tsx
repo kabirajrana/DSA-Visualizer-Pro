@@ -127,16 +127,7 @@ export const StepRow: React.FC<StepRowProps> = ({ step, stepNumber, isActive, is
         </div>
       </div>
 
-      {/* Compact explanation for active step */}
-      {isActive && (
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-[10px] md:text-xs text-muted-foreground mt-1 line-clamp-2"
-        >
-          {step.explanation}
-        </motion.p>
-      )}
+      {/* Explanation moved to Focus mode card - no duplicate here */}
     </motion.div>
   );
 };

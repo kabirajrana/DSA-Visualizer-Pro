@@ -28,7 +28,7 @@ interface DebuggerState {
   playbackSpeed: number;
   
   // View mode
-  viewMode: 'pictorial' | 'focus';
+  viewMode: 'pictorial' | 'focus' | 'bars';
   
   // Actions
   setCategory: (category: CategoryTab) => void;
@@ -49,7 +49,7 @@ interface DebuggerState {
   setPlaybackSpeed: (speed: number) => void;
   
   // View
-  setViewMode: (mode: 'pictorial' | 'focus') => void;
+  setViewMode: (mode: 'pictorial' | 'focus' | 'bars') => void;
 }
 
 const DEFAULT_ARRAY = '23,1,10,5,2,7,15';

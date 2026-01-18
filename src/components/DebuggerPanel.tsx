@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, BarChart3, Clock, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
-import { ALGORITHM_CODE } from '@/lib/algorithmCode';
 import { ALGORITHMS } from '@/lib/stepTypes';
+import { PSEUDOCODE, CODE_LINE_MAPPING } from '@/lib/pseudocode';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const DebuggerPanel: React.FC = () => {
@@ -11,8 +11,13 @@ export const DebuggerPanel: React.FC = () => {
   const [isCodeVisible, setIsCodeVisible] = useState(true);
 
   const currentStep = steps[currentStepIndex];
-  const algorithmCode = ALGORITHM_CODE[algorithm];
   const algorithmInfo = ALGORITHMS.find(a => a.id === algorithm);
+
+  const pseudocodeLines = PSEUDOCODE[algorithm];
+  const mappedLine = currentStep ? (CODE_LINE_MAPPING[algorithm]?.[currentStep.codeLine] ?? null) : null;
+  const activeIndex = mappedLine === null ? -1 : pseudocodeLines.findIndex((l) => l.line === mappedLine);
+  const maxLines = 12; // keep the code block height stable across all algorithms
+  const lineHeight = 22; // px; matches the fixed row height below
 
   return (
     <div className="panel h-full flex flex-col overflow-hidden">
@@ -47,9 +52,54 @@ export const DebuggerPanel: React.FC = () => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="bg-muted/30 border-b border-border">
-              <pre className="p-3 font-mono text-[10px] md:text-xs leading-relaxed overflow-x-auto scrollbar-thin text-foreground/90">
-                <code>{algorithmCode}</code>
-              </pre>
+              {/* Stable step-code view: fixed height, only the indicator moves */}
+              <div
+                className="relative p-3 font-mono text-[10px] md:text-xs text-foreground/90"
+                style={{
+                  minHeight: maxLines * lineHeight + 12,
+                }}
+              >
+                {/* Active line indicator (absolute, does not affect layout) */}
+                {activeIndex >= 0 && (
+                  <motion.div
+                    aria-hidden
+                    className="absolute left-3 right-3 rounded-md bg-primary/15 border-l-2 border-primary"
+                    initial={false}
+                    animate={{
+                      y: activeIndex * lineHeight,
+                      opacity: 1,
+                    }}
+                    transition={{ type: 'tween', duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                    style={{
+                      height: lineHeight,
+                      boxShadow: '0 0 0 1px hsl(var(--primary) / 0.10) inset',
+                    }}
+                  />
+                )}
+
+                <div className="relative">
+                  {pseudocodeLines.map((line) => {
+                    const isActive = line.line === mappedLine;
+                    return (
+                      <div
+                        key={line.line}
+                        className="flex items-center"
+                        style={{ height: lineHeight }}
+                      >
+                        <div className="w-7 shrink-0 text-muted-foreground/70 text-right pr-2 select-none">
+                          {line.line}
+                        </div>
+                        <div
+                          className={isActive ? 'text-foreground' : 'text-foreground/85'}
+                          style={{ paddingLeft: line.indent * 14 }}
+                        >
+                          {line.code}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </CollapsibleContent>
         </Collapsible>

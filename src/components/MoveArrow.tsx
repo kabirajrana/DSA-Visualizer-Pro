@@ -6,13 +6,29 @@ interface MoveArrowProps {
   arrow: MoveArrowType;
   cellWidth: number;
   cellGap: number;
+  fromX?: number;
+  toX?: number;
+  animateDraw?: boolean;
 }
 
-export const MoveArrow: React.FC<MoveArrowProps> = ({ arrow, cellWidth, cellGap }) => {
+export const MoveArrow: React.FC<MoveArrowProps> = ({
+  arrow,
+  cellWidth,
+  cellGap,
+  fromX,
+  toX,
+  animateDraw = true,
+}) => {
   const { fromIndex, toIndex, type } = arrow;
-  
-  const startX = fromIndex * (cellWidth + cellGap) + cellWidth / 2;
-  const endX = toIndex * (cellWidth + cellGap) + cellWidth / 2;
+
+  const startX =
+    typeof fromX === 'number'
+      ? fromX
+      : fromIndex * (cellWidth + cellGap) + cellWidth / 2;
+  const endX =
+    typeof toX === 'number'
+      ? toX
+      : toIndex * (cellWidth + cellGap) + cellWidth / 2;
   const midX = (startX + endX) / 2;
   const distance = Math.abs(endX - startX);
   const curveHeight = Math.min(30 + distance * 0.1, 50);
@@ -28,9 +44,10 @@ export const MoveArrow: React.FC<MoveArrowProps> = ({ arrow, cellWidth, cellGap 
   return (
     <motion.svg
       className="absolute top-full left-0 w-full h-16 pointer-events-none overflow-visible"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 2 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
     >
       <defs>
         <marker
@@ -55,9 +72,13 @@ export const MoveArrow: React.FC<MoveArrowProps> = ({ arrow, cellWidth, cellGap 
         strokeWidth="2"
         strokeLinecap="round"
         markerEnd={`url(#arrowhead-${type})`}
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
+        initial={animateDraw ? { pathLength: 0 } : { opacity: 0 }}
+        animate={animateDraw ? { pathLength: 1 } : { opacity: 1 }}
+        transition={
+          animateDraw
+            ? { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
+            : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+        }
       />
     </motion.svg>
   );

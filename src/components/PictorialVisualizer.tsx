@@ -1,9 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
 import { StepRow } from './StepRow';
 import { Legend } from './Legend';
-import { Eye, Layers, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
+import { BarChart3, Eye, Layers, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
+import { BarChartStep } from './BarChartStep';
+
+type ActiveIndicator = { y: number; height: number } | null;
 
 export const PictorialVisualizer: React.FC = () => {
   const { 
@@ -12,6 +15,7 @@ export const PictorialVisualizer: React.FC = () => {
     viewMode, 
     isPlaying, 
     playbackSpeed, 
+    algorithm,
     nextStep,
     prevStep,
     play,
@@ -19,41 +23,92 @@ export const PictorialVisualizer: React.FC = () => {
     reset
   } = useDebuggerStore();
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [animatingStepIndex, setAnimatingStepIndex] = useState(0);
+  const prevStepIndexRef = useRef<number>(0);
+  const [activeIndicator, setActiveIndicator] = useState<ActiveIndicator>(null);
 
   // Auto-play effect
   useEffect(() => {
     if (!isPlaying) return;
 
+    // Bars view is intentionally slower so indicators are readable.
+    const effectiveSpeed = viewMode === 'bars' ? Math.max(playbackSpeed, 1400) : playbackSpeed;
     const timer = setInterval(() => {
       nextStep();
-    }, playbackSpeed);
+    }, effectiveSpeed);
 
     return () => clearInterval(timer);
-  }, [isPlaying, playbackSpeed, nextStep]);
+  }, [isPlaying, playbackSpeed, nextStep, viewMode]);
 
   // Sync animating step with current step
   useEffect(() => {
     setAnimatingStepIndex(currentStepIndex);
   }, [currentStepIndex]);
 
-  // Auto-scroll to current step in pictorial mode (only scroll the visualizer, not the whole page)
-  useEffect(() => {
-    if (viewMode === 'pictorial' && containerRef.current) {
-      const activeRow = containerRef.current.querySelector(`[data-step="${currentStepIndex}"]`) as HTMLElement;
-      if (activeRow) {
-        // Use scrollTop on container instead of scrollIntoView to prevent parent layout shifts
-        const container = containerRef.current;
-        const containerRect = container.getBoundingClientRect();
-        const rowRect = activeRow.getBoundingClientRect();
-        const scrollTop = container.scrollTop + (rowRect.top - containerRect.top) - (containerRect.height / 2) + (rowRect.height / 2);
-        
-        container.scrollTo({
-          top: Math.max(0, scrollTop),
-          behavior: 'smooth'
-        });
-      }
+  // Pictorial active-step indicator: animate like Focus mode (explicit y/height tween).
+  // This indicator is driven only by the explicit currentStepIndex (no inference from DOM mutations).
+  useLayoutEffect(() => {
+    if (viewMode !== 'pictorial') {
+      setActiveIndicator(null);
+      return;
     }
+
+    const list = listRef.current;
+    if (!list) {
+      setActiveIndicator(null);
+      return;
+    }
+
+    const activeRow = list.querySelector(`[data-step="${currentStepIndex}"]`) as HTMLElement | null;
+    if (!activeRow) {
+      setActiveIndicator(null);
+      return;
+    }
+
+    const listRect = list.getBoundingClientRect();
+    const rowRect = activeRow.getBoundingClientRect();
+
+    // Match the previous -inset-1 look.
+    const inset = 4;
+    const y = Math.round(rowRect.top - listRect.top) - inset;
+    const height = Math.round(rowRect.height) + inset * 2;
+    setActiveIndicator({ y, height });
+  }, [currentStepIndex, steps.length, viewMode]);
+
+  // Pictorial mode guidance: keep the active step in a consistent viewport position
+  // so it doesn't appear to drift downward as steps progress. This scrolls ONLY the
+  // internal visualizer container (no page layout shift).
+  useEffect(() => {
+    if (viewMode !== 'pictorial' || !containerRef.current) {
+      prevStepIndexRef.current = currentStepIndex;
+      return;
+    }
+
+    const container = containerRef.current;
+    const activeRow = container.querySelector(`[data-step="${currentStepIndex}"]`) as HTMLElement | null;
+    if (!activeRow) {
+      prevStepIndexRef.current = currentStepIndex;
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const rowRect = activeRow.getBoundingClientRect();
+
+    // Keep the active row around ~35% from the top (reads like a guided timeline).
+    const desiredOffset = Math.round(containerRect.height * 0.35);
+    const currentOffset = Math.round(rowRect.top - containerRect.top);
+    const delta = currentOffset - desiredOffset;
+
+    // Only adjust if noticeably off; avoids micro-jitter.
+    if (Math.abs(delta) > 8) {
+      const nextTop = container.scrollTop + delta;
+      const stepDelta = Math.abs(currentStepIndex - prevStepIndexRef.current);
+      const behavior: ScrollBehavior = stepDelta <= 1 ? 'smooth' : 'auto';
+      container.scrollTo({ top: Math.max(0, nextTop), behavior });
+    }
+
+    prevStepIndexRef.current = currentStepIndex;
   }, [currentStepIndex, viewMode]);
 
   if (steps.length === 0) {
@@ -99,19 +154,22 @@ export const PictorialVisualizer: React.FC = () => {
           <div className="p-2 rounded-lg bg-primary/10">
             {viewMode === 'pictorial' ? (
               <Layers className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+            ) : viewMode === 'bars' ? (
+              <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             ) : (
               <Eye className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             )}
           </div>
           <div>
             <h2 className="font-semibold text-sm md:text-base text-foreground">
-              {viewMode === 'pictorial' ? 'Step-by-Step View' : 'Focus Mode'}
+              {viewMode === 'pictorial' ? 'Step-by-Step View' : viewMode === 'bars' ? 'Bar Chart View' : 'Focus Mode'}
             </h2>
             <p className="text-[10px] md:text-xs text-muted-foreground">
-              {viewMode === 'pictorial' 
-                ? 'Watch the algorithm progress step-by-step' 
-                : 'Focus on current step with details'
-              }
+              {viewMode === 'pictorial'
+                ? 'Watch the algorithm progress step-by-step'
+                : viewMode === 'bars'
+                  ? 'Histogram-style bars with clear indicators'
+                  : 'Focus on current step with details'}
             </p>
           </div>
         </div>
@@ -172,88 +230,98 @@ export const PictorialVisualizer: React.FC = () => {
         ref={containerRef}
         className="flex-1 overflow-y-auto scrollbar-thin p-3 md:p-4"
       >
-        <AnimatePresence mode="popLayout">
-          {viewMode === 'pictorial' ? (
-            <motion.div className="space-y-2 md:space-y-3">
-              {getVisibleSteps().map(({ step, globalIndex }) => (
-                <motion.div 
-                  key={globalIndex} 
+        {viewMode === 'pictorial' ? (
+          <div ref={listRef} className="relative flex flex-col gap-2 md:gap-3">
+            {/* Match Focus-mode indicator behavior: absolute overlay that animates position only */}
+            {activeIndicator && (
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute left-0 right-0 rounded-xl bg-primary/10 border border-primary/25"
+                initial={false}
+                animate={{ y: activeIndicator.y, height: activeIndicator.height, opacity: 1 }}
+                transition={{ type: 'tween', duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  boxShadow:
+                    '0 0 0 1px hsl(var(--primary) / 0.08) inset, 0 10px 24px -18px hsl(var(--primary) / 0.35)',
+                }}
+              />
+            )}
+
+            {getVisibleSteps().map(({ step, globalIndex }) => {
+              const isActiveRow = globalIndex === currentStepIndex;
+              return (
+                <div
+                  key={globalIndex}
                   data-step={globalIndex}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ 
-                    opacity: globalIndex <= currentStepIndex ? 1 : 0.3,
-                    y: 0,
-                    scale: globalIndex === currentStepIndex ? 1 : 0.98
-                  }}
-                  transition={{ 
-                    duration: 0.4,
-                    delay: globalIndex === currentStepIndex ? 0.1 : 0
-                  }}
+                  className={globalIndex <= currentStepIndex ? 'opacity-100' : 'opacity-40'}
                 >
-                  <StepRow
-                    step={step}
-                    stepNumber={globalIndex + 1}
-                    isActive={globalIndex === currentStepIndex}
-                    isPast={globalIndex < currentStepIndex}
-                  />
-                </motion.div>
-              ))}
-              
-              {/* Upcoming steps indicator */}
-              {currentStepIndex < steps.length - 1 && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.5 }}
-                  className="text-center py-4 text-xs text-muted-foreground"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-2 h-2 bg-primary/50 rounded-full animate-pulse" />
-                    {steps.length - currentStepIndex - 1} more step{steps.length - currentStepIndex - 1 > 1 ? 's' : ''} remaining
-                  </span>
-                </motion.div>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key={currentStepIndex}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="flex flex-col items-center justify-center min-h-full"
-            >
-              {/* Large Step Display */}
-              <div className="w-full max-w-3xl">
-                <motion.div
-                  className="text-center mb-4 md:mb-6"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <span className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-medium">
-                    Step {currentStepIndex + 1} of {steps.length}
-                  </span>
-                  <h3 className="mt-3 md:mt-4 text-xl md:text-2xl font-bold text-foreground">{currentStep.label}</h3>
-                </motion.div>
+                  <div className="relative">
+                    <StepRow
+                      step={step}
+                      stepNumber={globalIndex + 1}
+                      isActive={isActiveRow}
+                      isPast={globalIndex < currentStepIndex}
+                      stableLayout={true}
+                      indicatorMode="pictorial"
+                      algorithm={algorithm}
+                    />
+                  </div>
+                </div>
+              );
+            })}
 
-                <StepRow
-                  step={currentStep}
-                  stepNumber={currentStepIndex + 1}
-                  isActive={true}
-                  showArrows={true}
-                />
-
-                {/* Explanation */}
-                <motion.div
-                  className="mt-4 md:mt-6 p-4 rounded-lg bg-primary/5 border border-primary/20"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <p className="text-sm md:text-base text-foreground leading-relaxed">{currentStep.explanation}</p>
-                </motion.div>
+            {/* Upcoming steps indicator (opacity-only; no layout animation) */}
+            {currentStepIndex < steps.length - 1 && (
+              <div className="text-center py-4 text-xs text-muted-foreground opacity-50">
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary/50 rounded-full animate-pulse" />
+                  {steps.length - currentStepIndex - 1} more step{steps.length - currentStepIndex - 1 > 1 ? 's' : ''} remaining
+                </span>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </div>
+        ) : viewMode === 'bars' ? (
+          <div className="flex flex-col items-center justify-start min-h-full pt-4 md:pt-6">
+            <div className="w-full max-w-4xl">
+              <div className="text-center mb-4 md:mb-6">
+                <span className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-medium">
+                  Step {currentStepIndex + 1} of {steps.length}
+                </span>
+              </div>
+
+              <BarChartStep
+                step={currentStep}
+                stepIndex={currentStepIndex}
+                playbackSpeedMs={playbackSpeed}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-start min-h-full pt-6 md:pt-10">
+            {/* Large Step Display */}
+            <div className="w-full max-w-3xl">
+              <div className="text-center mb-4 md:mb-6">
+                <span className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-medium">
+                  Step {currentStepIndex + 1} of {steps.length}
+                </span>
+                <h3 className="mt-3 md:mt-4 text-xl md:text-2xl font-bold text-foreground">{currentStep.label}</h3>
+              </div>
+
+              <StepRow
+                step={currentStep}
+                stepNumber={currentStepIndex + 1}
+                isActive={true}
+                showArrows={true}
+                stableLayout={true}
+              />
+
+              {/* Explanation */}
+              <div className="mt-4 md:mt-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm md:text-base text-foreground leading-relaxed">{currentStep.explanation}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Shuffle, Zap, HelpCircle } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, Shuffle, Zap, HelpCircle, Layers, Target } from 'lucide-react';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
 import { SORTING_ALGORITHMS, SEARCHING_ALGORITHMS } from '@/lib/stepTypes';
 import { Button } from '@/components/ui/button';
@@ -178,18 +178,32 @@ export const Controls: React.FC = () => {
           </motion.div>
         )}
 
-        {/* View Mode Toggle */}
-        {hasSteps && (
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">View Mode</Label>
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-              <TabsList className="w-full bg-secondary h-9 md:h-11">
-                <TabsTrigger value="pictorial" className="flex-1 text-[10px] md:text-xs">📚 Pictorial</TabsTrigger>
-                <TabsTrigger value="focus" className="flex-1 text-[10px] md:text-xs">🎯 Focus</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
+        {/* View Mode */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">View Mode</Label>
+          <Tabs
+            value={viewMode === 'focus' ? 'focus' : 'pictorial'}
+            onValueChange={(v) => setViewMode(v as any)}
+            className="w-full"
+          >
+            <TabsList className="w-full grid grid-cols-2 h-11 rounded-xl bg-secondary/50 p-1">
+              <TabsTrigger
+                value="pictorial"
+                className="h-9 rounded-lg text-xs md:text-sm gap-2 data-[state=active]:bg-background/70 data-[state=active]:shadow-lg"
+              >
+                <Layers className="w-4 h-4" />
+                Pictorial
+              </TabsTrigger>
+              <TabsTrigger
+                value="focus"
+                className="h-9 rounded-lg text-xs md:text-sm gap-2 data-[state=active]:bg-background/70 data-[state=active]:shadow-lg"
+              >
+                <Target className="w-4 h-4" />
+                Focus
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

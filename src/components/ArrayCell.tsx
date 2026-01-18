@@ -8,7 +8,10 @@ interface ArrayCellProps {
   highlights: Highlights;
   pointers: Record<string, number | null>;
   layoutId?: string;
+  enableLayout?: boolean;
   isSmall?: boolean;
+  dimmed?: boolean;
+  cellRef?: React.Ref<HTMLDivElement>;
 }
 
 // Get animation type based on highlight state
@@ -72,35 +75,34 @@ const getAnimation = (animType: string, isActive: boolean) => {
   
   switch (animType) {
     case 'compare':
-      // Yellow pulsing glow for comparisons
+      // Gentle emphasis for comparisons (no constant pulsing)
       return {
-        scale: [1, 1.1, 1],
+        scale: [1, 1.03, 1],
         boxShadow: [
           '0 0 0px hsl(45 100% 55% / 0)',
-          '0 0 25px hsl(45 100% 55% / 0.8)',
+          '0 0 14px hsl(45 100% 55% / 0.35)',
           '0 0 0px hsl(45 100% 55% / 0)'
         ],
       };
     case 'swap':
-      // Red shake + flash for swaps
+      // Smooth swap emphasis (reduced shake)
       return {
-        x: [0, -4, 4, -4, 4, 0],
-        scale: [1, 1.15, 1],
+        x: [0, -2, 2, 0],
+        scale: [1, 1.06, 1],
         boxShadow: [
           '0 0 0px hsl(0 85% 60% / 0)',
-          '0 0 30px hsl(0 85% 60% / 1)',
-          '0 0 15px hsl(0 85% 60% / 0.5)'
+          '0 0 16px hsl(0 85% 60% / 0.55)',
+          '0 0 10px hsl(0 85% 60% / 0.25)'
         ],
       };
     case 'found':
-      // Green celebration bounce for found elements
+      // Clear success emphasis (no rotation)
       return {
-        scale: [1, 1.3, 0.95, 1.15, 1],
-        rotate: [0, -5, 5, -3, 0],
+        scale: [1, 1.08, 1],
         boxShadow: [
           '0 0 0px hsl(152 82% 50% / 0)',
-          '0 0 40px hsl(152 82% 50% / 1)',
-          '0 0 20px hsl(152 82% 50% / 0.7)'
+          '0 0 18px hsl(152 82% 50% / 0.55)',
+          '0 0 10px hsl(152 82% 50% / 0.25)'
         ],
       };
     case 'eliminated':
@@ -110,35 +112,35 @@ const getAnimation = (animType: string, isActive: boolean) => {
         scale: [1, 0.9],
       };
     case 'key':
-      // Blue lift effect for key element
+      // Subtle lift for key element (single motion)
       return {
-        y: [0, -8, 0],
-        scale: [1, 1.1, 1],
+        y: [0, -4, 0],
+        scale: [1, 1.04, 1],
         boxShadow: [
           '0 0 0px hsl(217 91% 60% / 0)',
-          '0 0 20px hsl(217 91% 60% / 0.8)',
-          '0 0 10px hsl(217 91% 60% / 0.5)'
+          '0 0 14px hsl(217 91% 60% / 0.35)',
+          '0 0 8px hsl(217 91% 60% / 0.2)'
         ],
       };
     case 'pivot':
-      // Orange glow for pivot
+      // Subtle glow for pivot (single motion)
       return {
-        scale: [1, 1.12, 1],
+        scale: [1, 1.04, 1],
         boxShadow: [
           '0 0 0px hsl(32 95% 55% / 0)',
-          '0 0 25px hsl(32 95% 55% / 0.9)',
-          '0 0 12px hsl(32 95% 55% / 0.5)'
+          '0 0 14px hsl(32 95% 55% / 0.4)',
+          '0 0 8px hsl(32 95% 55% / 0.2)'
         ],
       };
     case 'shift':
-      // Purple slide effect for shifts
+      // Small nudge for shifts
       return {
-        x: [0, 6, 0],
-        scale: [1, 1.05, 1],
+        x: [0, 3, 0],
+        scale: [1, 1.02, 1],
         boxShadow: [
           '0 0 0px hsl(262 80% 60% / 0)',
-          '0 0 20px hsl(262 80% 60% / 0.7)',
-          '0 0 10px hsl(262 80% 60% / 0.4)'
+          '0 0 14px hsl(262 80% 60% / 0.3)',
+          '0 0 8px hsl(262 80% 60% / 0.15)'
         ],
       };
     case 'sorted':
@@ -154,37 +156,54 @@ const getAnimation = (animType: string, isActive: boolean) => {
   }
 };
 
-const getTransition = (animType: string): { duration: number; repeat?: number; repeatDelay?: number; ease?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' } => {
+const getTransition = (
+  animType: string,
+  slowMotion: boolean,
+): { duration: number; repeat?: number; repeatDelay?: number; ease?: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' } => {
+  const slow = (d: number) => (slowMotion ? Math.round(d * 1.8 * 100) / 100 : d);
   switch (animType) {
     case 'compare':
-      return { duration: 0.5, repeat: Infinity, repeatDelay: 0.3 };
+      return { duration: slow(0.28), ease: 'easeOut' };
     case 'swap':
-      return { duration: 0.4, ease: 'easeInOut' };
+      return { duration: slow(0.32), ease: 'easeInOut' };
     case 'found':
-      return { duration: 0.6, ease: 'easeOut' };
+      return { duration: slow(0.35), ease: 'easeOut' };
     case 'eliminated':
-      return { duration: 0.3 };
+      return { duration: slow(0.3) };
     case 'key':
-      return { duration: 0.5, repeat: Infinity, repeatDelay: 0.4 };
+      return { duration: slow(0.32), ease: 'easeOut' };
     case 'pivot':
-      return { duration: 0.6, repeat: Infinity, repeatDelay: 0.4 };
+      return { duration: slow(0.32), ease: 'easeOut' };
     case 'shift':
-      return { duration: 0.3, repeat: 2 };
+      return { duration: slow(0.24), ease: 'easeInOut' };
     case 'sorted':
-      return { duration: 0.4 };
+      return { duration: slow(0.4) };
     default:
-      return { duration: 0.3 };
+      return { duration: slow(0.3) };
   }
 };
 
-export const ArrayCell: React.FC<ArrayCellProps> = ({ value, index, highlights, pointers, layoutId, isSmall = false }) => {
+export const ArrayCell: React.FC<ArrayCellProps> = ({
+  value,
+  index,
+  highlights,
+  pointers,
+  layoutId,
+  enableLayout = true,
+  isSmall = false,
+  dimmed = false,
+  cellRef,
+}) => {
   const cellClass = getCellClass(index, highlights);
-  const activePointers = Object.entries(pointers).filter(([_, idx]) => idx === index).map(([name]) => name);
+  const activePointers = Object.entries(pointers)
+    .filter(([_, idx]) => idx === index)
+    .map(([name]) => (name === 'minIdx' ? 'minIndex' : name));
   const animType = getAnimationType(index, highlights);
   const isHighlighted = animType !== 'none';
+  const slowMotion = !enableLayout;
 
   return (
-    <div className="relative">
+    <div ref={cellRef} className="relative" data-cell-index={index}>
       {/* Pointer labels - fixed positioning for mobile stability */}
       {activePointers.length > 0 && !isSmall && (
         <div 
@@ -204,56 +223,26 @@ export const ArrayCell: React.FC<ArrayCellProps> = ({ value, index, highlights, 
       
       {/* Cell with enhanced animations */}
       <motion.div 
-        layout 
+        layout={enableLayout}
         layoutId={layoutId} 
         className={`array-cell ${cellClass} ${isSmall ? 'w-8 h-8 text-sm' : ''} relative overflow-visible`} 
+        style={dimmed ? { opacity: 0.25, filter: 'saturate(0.8)' } : undefined}
         animate={getAnimation(animType, isHighlighted)}
         transition={{ 
-          layout: { type: 'spring', stiffness: 300, damping: 25 }, 
-          ...getTransition(animType)
+          ...(enableLayout ? { layout: { type: 'spring', stiffness: 300, damping: 25 } } : null),
+          ...getTransition(animType, slowMotion),
         }}
       >
         {value}
         
         {/* Visual indicators for specific states */}
         {animType === 'compare' && !isSmall && (
-          <motion.div 
-            className="absolute inset-0 rounded-lg border-2 border-yellow-400"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 0.4, repeat: Infinity }}
+          <motion.div
+            className="absolute inset-0 rounded-lg border-2 border-yellow-400/70"
+            initial={{ opacity: 0.35 }}
+            animate={{ opacity: 0.85 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           />
-        )}
-        
-        {animType === 'swap' && !isSmall && (
-          <motion.div 
-            className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: [0, 1.2, 1] }}
-            transition={{ duration: 0.3 }}
-          >
-            <span className="text-[6px] text-white font-bold">↔</span>
-          </motion.div>
-        )}
-        
-        {animType === 'found' && !isSmall && (
-          <motion.div 
-            className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: [0, 1.3, 1] }}
-            transition={{ duration: 0.4 }}
-          >
-            <span className="text-[8px] text-white font-bold">✓</span>
-          </motion.div>
-        )}
-        
-        {animType === 'eliminated' && !isSmall && (
-          <motion.div 
-            className="absolute inset-0 bg-gray-900/30 rounded-lg flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <span className="text-gray-400 text-lg font-bold">✗</span>
-          </motion.div>
         )}
       </motion.div>
       

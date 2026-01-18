@@ -1,73 +1,134 @@
-# Welcome to your Lovable project
+# 🚀 DSA Visualizer – Interactive Algorithm Learning Platform
 
-## Project info
+A **world-class interactive DSA Visualizer** built to help students and developers **understand sorting and searching algorithms visually**, step by step, with smooth animations, real Python code execution, and fair algorithm comparison.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This project focuses on **clarity, correctness, and learning experience**, not just animations.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## ✨ Key Features
 
-**Use Lovable**
+### 🎯 Algorithm Visualizations
+**Sorting Algorithms**
+- Bubble Sort
+- Selection Sort
+- Insertion Sort
+- Merge Sort
+- Quick Sort
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+**Searching Algorithms**
+- Linear Search
+- Binary Search
 
-Changes made via Lovable will be committed automatically to this repo.
+Each algorithm includes:
+- Step-by-step execution
+- Smooth animated indicators (compare, swap, pointers)
+- Clear index visibility
+- Stable UI during navigation
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🧠 Learning Modes
+- **Focus Mode**
+  - One step at a time
+  - Clean, distraction-free view
+  - Best for beginners
+- **Pictorial Mode**
+  - Pass-wise + step-wise visualization
+  - Same high-quality indicator animation as Focus Mode
+  - Stable layout with guided auto-scroll
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+### 🔍 Debugger (Real Code)
+- Displays **real Python code** for **all sorting and searching algorithms**
+- Step-synced execution
+- Highlights current executing lines
+- Clean and readable for learning
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+❌ No pseudocode  
+✅ Real Python implementations only
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+### ⚖️ Algorithm Comparison Mode
+- Compare **Sorting vs Sorting** and **Searching vs Searching**
+- Side-by-side **Focus-style visualization** (not confusing bar graphs)
+- Fair comparison using:
+  - Comparisons
+  - Swaps
+  - Passes
+  - Relative Speed (`1x`, `1.25x`, etc.)
+- **Fastest algorithm always sorts first**
+- Correct tie handling (no false winners)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+---
 
-**Edit a file directly in GitHub**
+### 🎨 UI / UX Excellence
+- Smooth Framer Motion animations
+- Stable layout (no jumping or shifting)
+- Clean, minimal, responsive design
+- Fully optimized for:
+  - Desktop
+  - Tablet
+  - Mobile
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+### 🌗 Dark & Light Mode
+- Fully supported across:
+  - Visualizer
+  - Debugger
+  - Comparison view
+  - Preloader
+- Theme preference persists automatically
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+### ⚡ World-Class Preloader
+- Custom **DSA-themed animated preloader**
+- Fast, attractive, and non-blocking
+- Designed to impress users on every refresh
+- Adaptive timing (never too slow)
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
+## 🛠️ Tech Stack
+
+### Frontend
+- Next.js (App Router)
+- React + TypeScript
 - Tailwind CSS
+- Framer Motion
+- shadcn/ui
 
-## How can I deploy this project?
+### Backend & Auth
+- Next.js Route Handlers
+- Auth.js (NextAuth)
+- Google OAuth + Email/Password
+- Prisma ORM
+- PostgreSQL
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## 🔐 Authentication & Access Control
+- **Guest users**
+  - Limited steps & passes
+- **Logged-in users**
+  - Full visualizer access
+  - Full debugger access
+  - Full comparison mode
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📦 Installation & Setup
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+# Clone the repository
+git clone https://github.com/<your-username>/algovista.git
+
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev

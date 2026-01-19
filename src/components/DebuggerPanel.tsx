@@ -4,6 +4,7 @@ import { Code2, BarChart3, Clock, ChevronDown, ChevronUp, Eye, EyeOff } from 'lu
 import { useDebuggerStore } from '@/store/useDebuggerStore';
 import { ALGORITHMS } from '@/lib/stepTypes';
 import { PSEUDOCODE, CODE_LINE_MAPPING } from '@/lib/pseudocode';
+import { ALGORITHM_CODE } from '@/lib/algorithmCode';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const DebuggerPanel: React.FC = () => {
@@ -13,10 +14,25 @@ export const DebuggerPanel: React.FC = () => {
   const currentStep = steps[currentStepIndex];
   const algorithmInfo = ALGORITHMS.find(a => a.id === algorithm);
 
+  const isQuickSort = algorithm === 'quick-sort';
   const pseudocodeLines = PSEUDOCODE[algorithm];
-  const mappedLine = currentStep ? (CODE_LINE_MAPPING[algorithm]?.[currentStep.codeLine] ?? null) : null;
-  const activeIndex = mappedLine === null ? -1 : pseudocodeLines.findIndex((l) => l.line === mappedLine);
-  const maxLines = 12; // keep the code block height stable across all algorithms
+
+  // For Quick Sort we must show the exact Python implementation (verbatim).
+  const quickSortCodeLines = isQuickSort
+    ? (ALGORITHM_CODE['quick-sort'] ?? '').split('\n')
+    : [];
+
+  const mappedLine = !isQuickSort && currentStep
+    ? (CODE_LINE_MAPPING[algorithm]?.[currentStep.codeLine] ?? null)
+    : null;
+
+  const activeIndex = (() => {
+    if (!currentStep) return -1;
+    if (isQuickSort) return currentStep.codeLine >= 0 ? currentStep.codeLine : -1;
+    if (mappedLine === null) return -1;
+    return pseudocodeLines.findIndex((l) => l.line === mappedLine);
+  })();
+  const maxLines = isQuickSort ? Math.max(12, quickSortCodeLines.length) : 12; // stable for others; full visibility for quick sort
   const lineHeight = 22; // px; matches the fixed row height below
 
   return (
@@ -78,26 +94,46 @@ export const DebuggerPanel: React.FC = () => {
                 )}
 
                 <div className="relative">
-                  {pseudocodeLines.map((line) => {
-                    const isActive = line.line === mappedLine;
-                    return (
-                      <div
-                        key={line.line}
-                        className="flex items-center"
-                        style={{ height: lineHeight }}
-                      >
-                        <div className="w-7 shrink-0 text-muted-foreground/70 text-right pr-2 select-none">
-                          {line.line}
-                        </div>
-                        <div
-                          className={isActive ? 'text-foreground' : 'text-foreground/85'}
-                          style={{ paddingLeft: line.indent * 14 }}
-                        >
-                          {line.code}
-                        </div>
-                      </div>
-                    );
-                  })}
+                    {isQuickSort
+                      ? quickSortCodeLines.map((code, idx) => {
+                          const isActive = idx === activeIndex;
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center"
+                              style={{ height: lineHeight }}
+                            >
+                              <div className="w-7 shrink-0 text-muted-foreground/70 text-right pr-2 select-none">
+                                {idx}
+                              </div>
+                              <div
+                                className={(isActive ? 'text-foreground' : 'text-foreground/85') + ' whitespace-pre'}
+                              >
+                                {code.length === 0 ? '\u00A0' : code}
+                              </div>
+                            </div>
+                          );
+                        })
+                      : pseudocodeLines.map((line) => {
+                          const isActive = line.line === mappedLine;
+                          return (
+                            <div
+                              key={line.line}
+                              className="flex items-center"
+                              style={{ height: lineHeight }}
+                            >
+                              <div className="w-7 shrink-0 text-muted-foreground/70 text-right pr-2 select-none">
+                                {line.line}
+                              </div>
+                              <div
+                                className={isActive ? 'text-foreground' : 'text-foreground/85'}
+                                style={{ paddingLeft: line.indent * 14 }}
+                              >
+                                {line.code}
+                              </div>
+                            </div>
+                          );
+                        })}
                 </div>
               </div>
             </div>

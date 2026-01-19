@@ -7,19 +7,25 @@ import { useEffect, useRef, useState } from "react";
 import Index from "./pages/Index";
 import Comparison from "./pages/Comparison";
 import NotFound from "./pages/NotFound";
-import { InstantAlgoPulsePreloader, LOADER_TIMING } from "@/components/InstantAlgoPulsePreloader";
+import {
+  InstantAlgoPulsePreloader,
+  LOADER_TIMING,
+} from "@/components/InstantAlgoPulsePreloader";
 
-// ✅ NEW: import the PWA install hook
+// ✅ PWA install hook
 import { usePWAInstall } from "./hooks/usePWAInstall";
 
 const queryClient = new QueryClient();
 
-// ✅ Updated branding (matches your domain + SEO)
+// ✅ Branding
 const BASE_TITLE = "Algovx – Interactive DSA Visualizer";
 const BRAND_NAME = "Algovx";
 const TAGLINE = "Visualize & Learn Algorithms";
 
 const LOADER_TIMING_CONFIG = LOADER_TIMING;
+
+// ✅ Key to remember dismiss choice
+const INSTALL_DISMISS_KEY = "algovx_install_dismissed_until";
 
 const TitleSync = () => {
   const location = useLocation();
@@ -65,13 +71,35 @@ const AppShell = () => {
   const [showPreloader, setShowPreloader] = useState(true);
   const [appReady, setAppReady] = useState(false);
 
-  // ✅ NEW: PWA install
+  // ✅ PWA install
   const { canInstall, installApp } = usePWAInstall();
 
-  // ✅ Optional: detect iOS for "Add to Home Screen" tip
+  // ✅ Show popup once (and allow dismiss)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+
+  // ✅ Detect iOS for manual install tip
   const isIOS =
     typeof navigator !== "undefined" &&
     /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const dismissInstall = (days = 7) => {
+    const until = Date.now() + days * 24 * 60 * 60 * 1000;
+    localStorage.setItem(INSTALL_DISMISS_KEY, String(until));
+    setShowInstallPrompt(false);
+  };
+
+  // ✅ Show install suggestion only once (after a small delay)
+  useEffect(() => {
+    if (!canInstall) return;
+
+    const dismissedUntil = Number(
+      localStorage.getItem(INSTALL_DISMISS_KEY) || "0"
+    );
+    if (Date.now() < dismissedUntil) return;
+
+    const t = window.setTimeout(() => setShowInstallPrompt(true), 2500);
+    return () => window.clearTimeout(t);
+  }, [canInstall]);
 
   // Mark the app as "ready" after the route has painted at least once.
   useEffect(() => {
@@ -99,7 +127,7 @@ const AppShell = () => {
     <>
       <TitleSync />
 
-      {/* ✅ Install suggestion UI */}
+      {/* ✅ Install suggestion UI (one-time popup + dismiss) */}
       <div
         style={{
           position: "fixed",
@@ -109,26 +137,71 @@ const AppShell = () => {
           display: "flex",
           flexDirection: "column",
           gap: 10,
-          maxWidth: 320,
+          maxWidth: 360,
         }}
       >
-        {canInstall && (
-          <button
-            onClick={installApp}
+        {showInstallPrompt && canInstall && (
+          <div
             style={{
-              padding: "12px 16px",
+              padding: "12px 14px",
               borderRadius: 12,
-              background: "#2563eb",
+              background: "rgba(11, 18, 32, 0.95)",
+              border: "1px solid rgba(255,255,255,0.12)",
               color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 800,
-              fontSize: 14,
               boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
             }}
           >
-            📲 Install Algovx App
-          </button>
+            <div style={{ lineHeight: 1.25 }}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>
+                Install Algovx?
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>
+                Get a faster, app-like experience on your home screen.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button
+                onClick={() => dismissInstall(7)}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "transparent",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                Not now
+              </button>
+
+              <button
+                onClick={async () => {
+                  await installApp();
+                  // If user cancels the browser prompt, avoid re-showing today
+                  dismissInstall(1);
+                }}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "#2563eb",
+                  color: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 800,
+                  fontSize: 13,
+                }}
+              >
+                Install
+              </button>
+            </div>
+          </div>
         )}
 
         {/* iPhone Safari does not support the install prompt API */}
@@ -158,7 +231,6 @@ const AppShell = () => {
         appReady={appReady}
         timing={LOADER_TIMING_CONFIG}
         onFinished={() => {
-          // Allow the next frame to paint the new route before fading out.
           window.requestAnimationFrame(() => setShowPreloader(false));
         }}
       />

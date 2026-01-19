@@ -9,11 +9,15 @@ import Comparison from "./pages/Comparison";
 import NotFound from "./pages/NotFound";
 import { InstantAlgoPulsePreloader, LOADER_TIMING } from "@/components/InstantAlgoPulsePreloader";
 
+// ✅ NEW: import the PWA install hook
+import { usePWAInstall } from "./hooks/usePWAInstall";
+
 const queryClient = new QueryClient();
 
-const BASE_TITLE = "DSA Visualizer – Interactive Algorithm Learning";
-const BRAND_NAME = "DSA Visualizer";
-const TAGLINE = "Visual Algorithm Learning";
+// ✅ Updated branding (matches your domain + SEO)
+const BASE_TITLE = "Algovx – Interactive DSA Visualizer";
+const BRAND_NAME = "Algovx";
+const TAGLINE = "Visualize & Learn Algorithms";
 
 const LOADER_TIMING_CONFIG = LOADER_TIMING;
 
@@ -24,7 +28,7 @@ const TitleSync = () => {
     const path = location.pathname;
 
     if (path === "/") {
-      document.title = BASE_TITLE;
+      document.title = `${BASE_TITLE} | Visualize & Learn Algorithms`;
       return;
     }
 
@@ -61,6 +65,14 @@ const AppShell = () => {
   const [showPreloader, setShowPreloader] = useState(true);
   const [appReady, setAppReady] = useState(false);
 
+  // ✅ NEW: PWA install
+  const { canInstall, installApp } = usePWAInstall();
+
+  // ✅ Optional: detect iOS for "Add to Home Screen" tip
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iphone|ipad|ipod/i.test(navigator.userAgent);
+
   // Mark the app as "ready" after the route has painted at least once.
   useEffect(() => {
     setAppReady(false);
@@ -86,6 +98,58 @@ const AppShell = () => {
   return (
     <>
       <TitleSync />
+
+      {/* ✅ Install suggestion UI */}
+      <div
+        style={{
+          position: "fixed",
+          right: 16,
+          bottom: 16,
+          zIndex: 9999,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          maxWidth: 320,
+        }}
+      >
+        {canInstall && (
+          <button
+            onClick={installApp}
+            style={{
+              padding: "12px 16px",
+              borderRadius: 12,
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 800,
+              fontSize: 14,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+            }}
+          >
+            📲 Install Algovx App
+          </button>
+        )}
+
+        {/* iPhone Safari does not support the install prompt API */}
+        {!canInstall && isIOS && (
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 12,
+              background: "rgba(11, 18, 32, 0.92)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.1)",
+              fontSize: 13,
+              lineHeight: 1.35,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+            }}
+          >
+            📌 Install on iPhone: tap <b>Share</b> → <b>Add to Home Screen</b>
+          </div>
+        )}
+      </div>
+
       <InstantAlgoPulsePreloader
         key={runId}
         show={showPreloader}
@@ -98,6 +162,7 @@ const AppShell = () => {
           window.requestAnimationFrame(() => setShowPreloader(false));
         }}
       />
+
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/comparison" element={<Comparison />} />

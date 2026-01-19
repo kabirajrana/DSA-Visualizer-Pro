@@ -12,20 +12,18 @@ import {
   LOADER_TIMING,
 } from "@/components/InstantAlgoPulsePreloader";
 
-// ✅ PWA install hook
 import { usePWAInstall } from "./hooks/usePWAInstall";
 
 const queryClient = new QueryClient();
 
-// ✅ Branding
 const BASE_TITLE = "Algovx – Interactive DSA Visualizer";
 const BRAND_NAME = "Algovx";
 const TAGLINE = "Visualize & Learn Algorithms";
 
 const LOADER_TIMING_CONFIG = LOADER_TIMING;
 
-// ✅ Key to remember dismiss choice
-const INSTALL_DISMISS_KEY = "algovx_install_dismissed_until";
+// ✅ Session-only key: shows again next visit
+const INSTALL_SESSION_KEY = "algovx_install_prompt_dismissed_session";
 
 const TitleSync = () => {
   const location = useLocation();
@@ -74,7 +72,7 @@ const AppShell = () => {
   // ✅ PWA install
   const { canInstall, installApp } = usePWAInstall();
 
-  // ✅ Show popup once (and allow dismiss)
+  // ✅ Show prompt (per visit/session)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   // ✅ Detect iOS for manual install tip
@@ -82,20 +80,19 @@ const AppShell = () => {
     typeof navigator !== "undefined" &&
     /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-  const dismissInstall = (days = 7) => {
-    const until = Date.now() + days * 24 * 60 * 60 * 1000;
-    localStorage.setItem(INSTALL_DISMISS_KEY, String(until));
+  // ✅ Dismiss only for THIS SESSION (shows again next visit)
+  const dismissForThisVisit = () => {
+    sessionStorage.setItem(INSTALL_SESSION_KEY, "1");
     setShowInstallPrompt(false);
   };
 
-  // ✅ Show install suggestion only once (after a small delay)
+  // ✅ Show install suggestion on EVERY VISIT (unless dismissed this session)
   useEffect(() => {
     if (!canInstall) return;
 
-    const dismissedUntil = Number(
-      localStorage.getItem(INSTALL_DISMISS_KEY) || "0"
-    );
-    if (Date.now() < dismissedUntil) return;
+    const dismissedThisSession =
+      sessionStorage.getItem(INSTALL_SESSION_KEY) === "1";
+    if (dismissedThisSession) return;
 
     const t = window.setTimeout(() => setShowInstallPrompt(true), 2500);
     return () => window.clearTimeout(t);
@@ -127,7 +124,7 @@ const AppShell = () => {
     <>
       <TitleSync />
 
-      {/* ✅ Install suggestion UI (one-time popup + dismiss) */}
+      {/* ✅ Install suggestion UI (shows every visit, dismiss hides only for this session) */}
       <div
         style={{
           position: "fixed",
@@ -166,7 +163,7 @@ const AppShell = () => {
 
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
               <button
-                onClick={() => dismissInstall(7)}
+                onClick={dismissForThisVisit}
                 style={{
                   padding: "10px 12px",
                   borderRadius: 10,
@@ -184,8 +181,8 @@ const AppShell = () => {
               <button
                 onClick={async () => {
                   await installApp();
-                  // If user cancels the browser prompt, avoid re-showing today
-                  dismissInstall(1);
+                  // Hide after they interact; next visit it will show again if not installed.
+                  dismissForThisVisit();
                 }}
                 style={{
                   padding: "10px 14px",
@@ -238,7 +235,6 @@ const AppShell = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/comparison" element={<Comparison />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

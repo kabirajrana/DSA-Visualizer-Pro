@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, BarChart3, Clock, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useDebuggerStore } from '@/store/useDebuggerStore';
@@ -8,8 +8,19 @@ import { ALGORITHM_CODE } from '@/lib/algorithmCode';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const DebuggerPanel: React.FC = () => {
-  const { algorithm, steps, currentStepIndex } = useDebuggerStore();
+  const { algorithm, steps, currentStepIndex, viewMode } = useDebuggerStore();
   const [isCodeVisible, setIsCodeVisible] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Focus mode requirement: code must be visible immediately (no expand, no scroll hunting).
+  useEffect(() => {
+    if (viewMode !== 'focus') return;
+    setIsCodeVisible(true);
+    // Ensure the code section (top) is in view.
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, [viewMode]);
 
   const currentStep = steps[currentStepIndex];
   const algorithmInfo = ALGORITHMS.find(a => a.id === algorithm);
@@ -42,7 +53,7 @@ export const DebuggerPanel: React.FC = () => {
         <Code2 className="w-4 h-4 text-primary" />
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
         {/* Algorithm Code (Collapsible) */}
         <Collapsible open={isCodeVisible} onOpenChange={setIsCodeVisible}>
           <CollapsibleTrigger className="collapsible-trigger">

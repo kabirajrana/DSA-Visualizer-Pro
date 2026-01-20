@@ -95,6 +95,23 @@ export const PictorialVisualizer: React.FC = () => {
     const containerRect = container.getBoundingClientRect();
     const rowRect = activeRow.getBoundingClientRect();
 
+    // Merge Sort UX: keep the visual area stable on Next/Previous.
+    // Only scroll the internal container if the active row is drifting out of view.
+    if (algorithm === 'merge-sort' || algorithm === 'quick-sort') {
+      const topSafe = containerRect.top + 70;
+      const bottomSafe = containerRect.bottom - 70;
+      const needsScroll = rowRect.top < topSafe || rowRect.bottom > bottomSafe;
+
+      if (needsScroll) {
+        const stepDelta = Math.abs(currentStepIndex - prevStepIndexRef.current);
+        const behavior: ScrollBehavior = stepDelta <= 1 ? 'smooth' : 'auto';
+        activeRow.scrollIntoView({ behavior, block: 'nearest' });
+      }
+
+      prevStepIndexRef.current = currentStepIndex;
+      return;
+    }
+
     // Keep the active row around ~35% from the top (reads like a guided timeline).
     const desiredOffset = Math.round(containerRect.height * 0.35);
     const currentOffset = Math.round(rowRect.top - containerRect.top);
@@ -258,6 +275,7 @@ export const PictorialVisualizer: React.FC = () => {
                   <div className="relative">
                     <StepRow
                       step={step}
+                      prevStep={globalIndex > 0 ? steps[globalIndex - 1] : undefined}
                       stepNumber={globalIndex + 1}
                       isActive={isActiveRow}
                       isPast={globalIndex < currentStepIndex}
@@ -309,10 +327,12 @@ export const PictorialVisualizer: React.FC = () => {
 
               <StepRow
                 step={currentStep}
+                prevStep={currentStepIndex > 0 ? steps[currentStepIndex - 1] : undefined}
                 stepNumber={currentStepIndex + 1}
                 isActive={true}
                 showArrows={true}
                 stableLayout={true}
+                algorithm={algorithm}
               />
 
               {/* Explanation */}

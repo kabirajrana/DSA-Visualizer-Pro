@@ -461,11 +461,13 @@ const RunnerPanel: React.FC<{
               >
                 <StepRow
                   step={currentStep}
+                  prevStep={state.cursor > 0 ? state.steps[state.cursor - 1] : undefined}
                   stepNumber={state.cursor + 1}
                   isActive={true}
                   showArrows={true}
                   stableLayout={true}
                   indicatorMode="focus"
+                  algorithm={state.algorithm}
                 />
               </div>
 

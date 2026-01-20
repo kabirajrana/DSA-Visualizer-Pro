@@ -7,6 +7,7 @@ import { MoveArrow } from './MoveArrow';
 
 interface StepRowProps {
   step: Step;
+  prevStep?: Step;
   stepNumber: number;
   isActive: boolean;
   isPast?: boolean;
@@ -28,6 +29,7 @@ const PICTORIAL_HEAP_SLOWDOWN_MS = 350;
 
 export const StepRow: React.FC<StepRowProps> = ({
   step,
+  prevStep,
   stepNumber,
   isActive,
   isPast = false,
@@ -118,11 +120,181 @@ export const StepRow: React.FC<StepRowProps> = ({
 
   const pointersForRow = useMemo(() => (isActive ? step.pointers : {}), [isActive, step.pointers]);
 
+  const isFullySorted = useMemo(() => {
+    const len = Math.max(step.after.length, step.before.length);
+    if (len <= 0) return false;
+    const sorted = new Set<number>([
+      ...(step.highlights.before.sorted ?? []),
+      ...(step.highlights.after.sorted ?? []),
+    ]);
+    return sorted.size >= len;
+  }, [step.after.length, step.before.length, step.highlights.after.sorted, step.highlights.before.sorted]);
+
+  const useQuickSortLayout = useMemo(() => {
+    if (algorithm !== 'quick-sort') return false;
+    // Quick Sort always provides low/high; pivot is present during partition steps.
+    // Keep this renderer opt-in by algorithm so other visualizations stay unchanged.
+    return true;
+  }, [algorithm]);
+
+  const useMergeSortLayout = useMemo(() => {
+    // Render-only upgrade: detect Merge Sort steps via labels to avoid touching step logic.
+    const label = step.label;
+    if (label.startsWith('Divide') || label.startsWith('Merge') || label.startsWith('Merged')) return true;
+    return algorithm === 'merge-sort' && (step.pointers.left != null || step.pointers.right != null || step.pointers.mid != null);
+  }, [algorithm, step.label, step.pointers.left, step.pointers.mid, step.pointers.right]);
+
+  const mergeMeta = useMemo(() => {
+    if (!useMergeSortLayout) return null;
+
+    const left = (step.pointers.left ?? prevStep?.pointers.left) ?? null;
+    const right = (step.pointers.right ?? prevStep?.pointers.right) ?? null;
+    let mid = (step.pointers.mid ?? prevStep?.pointers.mid) ?? null;
+    if (mid == null && left != null && right != null) {
+      mid = Math.floor((left + right) / 2);
+    }
+
+    const stage: 'divide' | 'merge' | 'merged' | 'other' = step.label.startsWith('Divide')
+      ? 'divide'
+      : step.label.startsWith('Merged')
+        ? 'merged'
+        : step.label.startsWith('Merge')
+          ? 'merge'
+          : 'other';
+
+    return { left, mid, right, stage };
+  }, [prevStep?.pointers.left, prevStep?.pointers.mid, prevStep?.pointers.right, step.label, step.pointers.left, step.pointers.mid, step.pointers.right, useMergeSortLayout]);
+
+  const mergeSources = useMemo(() => {
+    if (!mergeMeta || mergeMeta.stage !== 'merged') return null;
+    const { left, right } = mergeMeta;
+    if (left == null || right == null) return null;
+
+    // Prefer the pre-merge snapshot from the prior step if available.
+    const beforeBase = prevStep?.label.startsWith('Merge') ? prevStep.before : step.before;
+    const mid = mergeMeta.mid;
+    if (mid == null) return null;
+
+    const leftArr = beforeBase.slice(left, mid + 1);
+    const rightArr = beforeBase.slice(mid + 1, right + 1);
+
+    // Simulate stable merge to label each output pick and its source position.
+    const picks: Array<'L' | 'R'> = [];
+    const sourceGlobalIndices: number[] = [];
+    let i = 0;
+    let j = 0;
+    const total = right - left + 1;
+
+    let exhausted: null | { side: 'L' | 'R'; atOutputIndex: number } = null;
+
+    for (let t = 0; t < total; t++) {
+      const leftVal = i < leftArr.length ? leftArr[i] : null;
+      const rightVal = j < rightArr.length ? rightArr[j] : null;
+
+      if (rightVal == null || (leftVal != null && leftVal <= rightVal)) {
+        picks.push('L');
+        sourceGlobalIndices.push(left + i);
+        i++;
+      } else {
+        picks.push('R');
+        sourceGlobalIndices.push(mid + 1 + j);
+        j++;
+      }
+
+      if (!exhausted) {
+        if (i >= leftArr.length && j < rightArr.length) exhausted = { side: 'L', atOutputIndex: t };
+        if (j >= rightArr.length && i < leftArr.length) exhausted = { side: 'R', atOutputIndex: t };
+      }
+    }
+
+    const highlightDelayMs = 120;
+    const sourceToPickIndex: Record<number, number> = {};
+    for (let t = 0; t < sourceGlobalIndices.length; t++) {
+      sourceToPickIndex[sourceGlobalIndices[t]] = t;
+    }
+
+    return { picks, sourceGlobalIndices, sourceToPickIndex, exhausted, highlightDelayMs };
+  }, [mergeMeta, prevStep?.before, prevStep?.label, step.before]);
+
+  const quickMeta = useMemo(() => {
+    if (!useQuickSortLayout) return null;
+
+    const low = step.pointers.low ?? null;
+    const high = step.pointers.high ?? null;
+    // Pivot pointer is null for recursion markers; for partition steps it is an index.
+    const pivotIndex = step.pointers.pivot ?? step.highlights.before.pivot?.[0] ?? step.highlights.after.pivot?.[0] ?? null;
+    const i = step.pointers.i ?? null;
+    const j = step.pointers.j ?? null;
+
+    return { low, high, pivotIndex, i, j };
+  }, [step.highlights.after.pivot, step.highlights.before.pivot, step.pointers.high, step.pointers.i, step.pointers.j, step.pointers.low, step.pointers.pivot, useQuickSortLayout]);
+
+  const effectivePointersForRow = useMemo(() => {
+    // Quick Sort UX: pointer badges must never cover numbers.
+    // Render pointers as chips in the header instead.
+    if (useQuickSortLayout) return {};
+    return pointersForRow;
+  }, [pointersForRow, useQuickSortLayout]);
+
   const dimIndices = useMemo(() => {
     if (!isActive || !showArrows || !hasSwap || phase !== 'before' || !swapArrow) return new Set<number>();
     if (indicatorMode === 'pictorial' && !animationsEnabled) return new Set<number>();
     return new Set([swapArrow.fromIndex, swapArrow.toIndex]);
   }, [animationsEnabled, hasSwap, indicatorMode, isActive, phase, showArrows, swapArrow]);
+
+  const quickDimIndices = useMemo(() => {
+    if (!useQuickSortLayout) return new Set<number>();
+
+    // Step generator already marks eliminated indices; we reuse that for dimming.
+    const base = currentHighlights.eliminated ?? [];
+    return new Set(base);
+  }, [currentHighlights.eliminated, useQuickSortLayout]);
+
+  const mergedDimIndices = useMemo(() => {
+    if (!useQuickSortLayout) return dimIndices;
+    // Combine swap-dim with eliminated-dim (swap takes precedence visually but both are dim.
+    const combined = new Set<number>(Array.from(dimIndices));
+    for (const idx of quickDimIndices) combined.add(idx);
+    return combined;
+  }, [dimIndices, quickDimIndices, useQuickSortLayout]);
+
+  const emptyHighlightsForView = useMemo<Highlights>(
+    () => ({ compare: [], swap: [], key: [], sorted: [], found: [], shift: [], pivot: [], eliminated: [] }),
+    [],
+  );
+
+  const effectiveHighlights = useMemo(() => {
+    if (!useQuickSortLayout) return currentHighlights;
+    // Beginner-first: on compare steps, highlight ONLY current element + pivot (plus dimming/sorted).
+    if (step.label.startsWith('Compare with Pivot')) {
+      return {
+        ...emptyHighlightsForView,
+        compare: currentHighlights.compare,
+        pivot: currentHighlights.pivot,
+        sorted: currentHighlights.sorted,
+        eliminated: currentHighlights.eliminated,
+      };
+    }
+    return currentHighlights;
+  }, [currentHighlights, emptyHighlightsForView, step.label, useQuickSortLayout]);
+
+  const quickCompareFocusDim = useMemo(() => {
+    if (!useQuickSortLayout) return new Set<number>();
+    if (!isActive) return new Set<number>();
+    if (!step.label.startsWith('Compare with Pivot')) return new Set<number>();
+    const low = quickMeta?.low;
+    const high = quickMeta?.high;
+    const j = quickMeta?.j;
+    const pivotIndex = quickMeta?.pivotIndex;
+    if (low == null || high == null || j == null || pivotIndex == null) return new Set<number>();
+
+    const keep = new Set<number>([j, pivotIndex]);
+    const dim = new Set<number>();
+    for (let idx = low; idx <= high; idx++) {
+      if (!keep.has(idx)) dim.add(idx);
+    }
+    return dim;
+  }, [isActive, quickMeta?.high, quickMeta?.j, quickMeta?.low, quickMeta?.pivotIndex, step.label, useQuickSortLayout]);
 
   // Pictorial mode: avoid any first-paint phase flash (critical for Quick Sort correctness).
   useLayoutEffect(() => {
@@ -336,65 +508,560 @@ export const StepRow: React.FC<StepRowProps> = ({
           <p className={`text-[11px] md:text-xs font-medium truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
             {step.label}
           </p>
+
+          {isActive && isFullySorted && (
+            <div className="mt-1">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-sorted/20 text-sorted border border-sorted/50 text-[10px] md:text-xs font-semibold">
+                <Check className="w-3.5 h-3.5" />
+                Array fully sorted
+              </span>
+            </div>
+          )}
+
+          {/* Quick Sort info line (no overlay on cells) */}
+          {useQuickSortLayout && isActive && quickMeta?.low != null && quickMeta?.high != null && (
+            <div className="mt-1 min-h-5">
+              <p className="text-[10px] text-muted-foreground">
+                Active subarray <span className="font-mono">[{quickMeta.low}–{quickMeta.high}]</span>
+                {quickMeta.pivotIndex != null ? (
+                  <>
+                    {' '}
+                    • Pivot at <span className="font-mono">{quickMeta.pivotIndex}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Single array row (no duplicated before/after). Animations happen as overlays. */}
-      <div
-        ref={rowRef}
-        className="relative"
-        style={{
-          // Reserve space so pointer labels above and indicators below never shift layout.
-          // When stableLayout is enabled (used by the visualizer), keep this identical across
-          // active/inactive rows so Next/Previous never causes layout reflow.
-          paddingTop: stableLayout ? 28 : isActive ? 28 : 22,
-          paddingBottom: stableLayout ? 34 : isActive ? 34 : 28,
-          minHeight: stableLayout ? 96 : isActive ? 96 : 84,
-        }}
-      >
-        <div className="flex justify-center">
-          <div
-            ref={cellsRef}
-            className={`relative inline-flex items-center gap-1 ${isActive ? 'flex-nowrap' : 'flex-wrap justify-center'}`}
-            style={{ maxWidth: '100%' }}
-          >
-          {indicatorMode === 'pictorial' ? (
-            <>
-              {currentArray.map((value, index) => (
-                <ArrayCell
-                  key={`cell-${stepNumber}-${index}`}
-                  value={value}
-                  index={index}
-                  highlights={currentHighlights}
-                  pointers={pointersForRow}
-                  enableLayout={false}
-                  isSmall={!isActive}
-                  dimmed={dimIndices.has(index)}
-                  cellRef={(el) => {
-                    cellRefs.current.set(index, el);
-                  }}
-                />
-              ))}
-            </>
-          ) : (
-            <AnimatePresence mode="popLayout">
-              {currentArray.map((value, index) => (
-                <ArrayCell
-                  key={`cell-${stepNumber}-${index}`}
-                  value={value}
-                  index={index}
-                  highlights={currentHighlights}
-                  pointers={pointersForRow}
-                  enableLayout={true}
-                  isSmall={!isActive}
-                  dimmed={dimIndices.has(index)}
-                  cellRef={(el) => {
-                    cellRefs.current.set(index, el);
-                  }}
-                />
-              ))}
-            </AnimatePresence>
-          )}
+      {useMergeSortLayout && mergeMeta ? (
+        <div
+          className="relative rounded-xl border border-border bg-background/40 p-3 md:p-4 overflow-visible"
+          style={{
+            // Critical: keep Merge Sort visualization stable across Next/Previous.
+            // Use a consistent height envelope so only inner tiles animate.
+            minHeight: stableLayout ? 360 : undefined,
+          }}
+        >
+          <div className="flex flex-col gap-3 md:gap-4">
+            {/* Split / Merge stage header */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`text-[10px] md:text-xs font-semibold tracking-wide uppercase ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {mergeMeta.stage === 'divide' ? 'Split (Divide)' : mergeMeta.stage === 'merge' ? 'Merge (Prepare)' : mergeMeta.stage === 'merged' ? 'Merge Result' : 'Merge Sort'}
+                </span>
+                {mergeMeta.left != null && mergeMeta.right != null && (
+                  <span className="text-[10px] md:text-xs font-mono text-muted-foreground">
+                    Range [{mergeMeta.left}–{mergeMeta.right}]
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Left / Right blocks */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {/* Left */}
+              <div className="rounded-xl border border-border bg-card/60 p-3 overflow-visible">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    {mergeMeta.stage === 'divide' ? 'Left half' : 'Sorted Left'}
+                  </span>
+                  {mergeMeta.left != null && mergeMeta.mid != null && (
+                    <span className="text-[10px] font-mono text-muted-foreground">[{mergeMeta.left}–{mergeMeta.mid}]</span>
+                  )}
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const left = mergeMeta.left;
+                      const mid = mergeMeta.mid;
+                      if (left == null || mid == null) return null;
+                      const indices = Array.from({ length: Math.max(0, mid - left + 1) }, (_, i) => left + i);
+                      return indices.map((idx) => (
+                        <div key={`ms-l-${stepNumber}-${idx}`} className="relative">
+                          {mergeSources && mergeMeta.stage === 'merged' && isActive && phase === 'after' && mergeSources.sourceToPickIndex[idx] != null && (
+                            <motion.div
+                              className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-blue-500/40"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: [0, 1, 0] }}
+                              transition={{
+                                duration: 0.38,
+                                ease: 'easeOut',
+                                delay: (mergeSources.sourceToPickIndex[idx] * mergeSources.highlightDelayMs) / 1000,
+                              }}
+                            />
+                          )}
+                          <ArrayCell
+                            value={currentArray[idx]}
+                            index={idx}
+                            highlights={currentHighlights}
+                            pointers={{}}
+                            enableLayout={indicatorMode !== 'pictorial'}
+                            isSmall={!isActive}
+                          />
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right */}
+              <div className="rounded-xl border border-border bg-card/60 p-3 overflow-visible">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    {mergeMeta.stage === 'divide' ? 'Right half' : 'Sorted Right'}
+                  </span>
+                  {mergeMeta.mid != null && mergeMeta.right != null && (
+                    <span className="text-[10px] font-mono text-muted-foreground">[{mergeMeta.mid + 1}–{mergeMeta.right}]</span>
+                  )}
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-1 flex-wrap justify-center">
+                    {(() => {
+                      const mid = mergeMeta.mid;
+                      const right = mergeMeta.right;
+                      if (mid == null || right == null) return null;
+                      const start = mid + 1;
+                      const indices = Array.from({ length: Math.max(0, right - start + 1) }, (_, i) => start + i);
+                      return indices.map((idx) => (
+                        <div key={`ms-r-${stepNumber}-${idx}`} className="relative">
+                          {mergeSources && mergeMeta.stage === 'merged' && isActive && phase === 'after' && mergeSources.sourceToPickIndex[idx] != null && (
+                            <motion.div
+                              className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-purple-500/40"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: [0, 1, 0] }}
+                              transition={{
+                                duration: 0.38,
+                                ease: 'easeOut',
+                                delay: (mergeSources.sourceToPickIndex[idx] * mergeSources.highlightDelayMs) / 1000,
+                              }}
+                            />
+                          )}
+                          <ArrayCell
+                            value={currentArray[idx]}
+                            index={idx}
+                            highlights={currentHighlights}
+                            pointers={{}}
+                            enableLayout={indicatorMode !== 'pictorial'}
+                            isSmall={!isActive}
+                          />
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Merge output row */}
+            {mergeMeta.left != null && mergeMeta.right != null && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 md:p-4 overflow-visible">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <span className="text-xs font-semibold text-foreground">Merged output</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-muted-foreground">[{mergeMeta.left}–{mergeMeta.right}]</span>
+                    {mergeMeta.stage === 'merged' && mergeSources?.exhausted && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {mergeSources.exhausted.side === 'L' ? 'Left exhausted → copy remaining Right' : 'Right exhausted → copy remaining Left'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="relative inline-flex items-center gap-1 flex-wrap justify-center" style={{ paddingTop: 22 }}>
+                    {(() => {
+                      const left = mergeMeta.left as number;
+                      const right = mergeMeta.right as number;
+                      const len = right - left + 1;
+                      const outputValues = step.after.slice(left, right + 1);
+
+                      // Stable structure: always render slots.
+                      // Teaching-first: only fill once the merge result exists.
+                      const showFilled = mergeMeta.stage === 'merged' && (isPast || (isActive && phase === 'after'));
+                      const showAnimated = mergeMeta.stage === 'merged' && isActive && phase === 'after';
+
+                      return Array.from({ length: len }, (_, t) => {
+                        const v = outputValues[t];
+                        const src = mergeSources?.picks[t] ?? null;
+                        const fromX = src === 'L' ? -12 : src === 'R' ? 12 : 0;
+
+                        if (!showFilled) {
+                          return (
+                            <div
+                              key={`ms-out-empty-${stepNumber}-${t}`}
+                              className="array-cell array-cell-default opacity-25"
+                              style={{ width: isActive ? undefined : 32, height: isActive ? undefined : 32 }}
+                            />
+                          );
+                        }
+
+                        const cell = (
+                          <div className="relative" key={`ms-out-${stepNumber}-${t}`}
+                          >
+                            <motion.div
+                              initial={showAnimated ? { opacity: 0, y: -8, x: fromX } : false}
+                              animate={{ opacity: 1, y: 0, x: 0 }}
+                              transition={{
+                                duration: 0.38,
+                                ease: 'easeOut',
+                                delay: showAnimated ? t * 0.12 : 0,
+                              }}
+                            >
+                              <ArrayCell
+                                value={v}
+                                index={left + t}
+                                highlights={currentHighlights}
+                                pointers={{}}
+                                enableLayout={false}
+                                isSmall={!isActive}
+                              />
+                            </motion.div>
+                          </div>
+                        );
+
+                        return cell;
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : useQuickSortLayout && quickMeta ? (
+        <div
+          className="relative rounded-xl border border-border bg-background/40 p-3 md:p-4 overflow-visible"
+          style={{ minHeight: stableLayout ? 360 : undefined }}
+        >
+          <div className="flex flex-col gap-3">
+            {/* Comparison cue (simple, readable) */}
+            {isActive && step.label.startsWith('Compare with Pivot') && quickMeta.j != null && quickMeta.pivotIndex != null && (
+              <p className="text-xs text-muted-foreground">
+                Compare <span className="font-mono">arr[{quickMeta.j}]</span> with <span className="font-semibold">Pivot</span>
+              </p>
+            )}
+
+            {isActive && (step.label === 'Swap' || step.label === 'No Swap / Skip' || step.label.startsWith('Pivot Placement')) && (
+              <p className="text-xs text-muted-foreground">
+                {step.label === 'Swap'
+                  ? 'Move this element to the Left side'
+                  : step.label === 'No Swap / Skip'
+                    ? 'This element stays on the Right side'
+                    : 'Place Pivot into its correct position'}
+              </p>
+            )}
+
+            {/* Cells + simple structure live in ONE measurement container (so arrows/swaps work). */}
+            <div ref={rowRef} className="relative" style={{ paddingBottom: 34 }}>
+              <div className="flex justify-center">
+                <div ref={cellsRef} className="relative w-full" style={{ maxWidth: 860 }}>
+                  {/* 3-box pivot division (obvious, structural) */}
+                  {quickMeta.pivotIndex != null && quickMeta.low != null && quickMeta.high != null ? (
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-start">
+                      {/* Left */}
+                      <div className="rounded-xl border border-border bg-card/60 p-3 overflow-visible">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-xs font-semibold text-foreground">Left (&lt; Pivot)</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">[{quickMeta.low}–{Math.max(quickMeta.low, quickMeta.pivotIndex - 1)}]</span>
+                        </div>
+                        <div className="flex justify-center">
+                          <div className="inline-flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: '100%' }}>
+                            {Array.from({ length: Math.max(0, quickMeta.pivotIndex - quickMeta.low) }, (_, t) => quickMeta.low! + t).map((idx) => (
+                              <ArrayCell
+                                key={`qs-left-${stepNumber}-${idx}`}
+                                value={currentArray[idx]}
+                                index={idx}
+                                highlights={effectiveHighlights}
+                                pointers={{}}
+                                enableLayout={indicatorMode !== 'pictorial'}
+                                isSmall={!isActive}
+                                dimmed={mergedDimIndices.has(idx) || quickCompareFocusDim.has(idx)}
+                                cellRef={(el) => {
+                                  cellRefs.current.set(idx, el);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pivot (fixed center) */}
+                      <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 overflow-visible">
+                        <div className="flex items-center justify-center mb-2">
+                          <span className="text-xs font-semibold text-foreground">Pivot</span>
+                        </div>
+                        <div className="flex justify-center">
+                          <ArrayCell
+                            key={`qs-pivot-${stepNumber}-${quickMeta.pivotIndex}`}
+                            value={currentArray[quickMeta.pivotIndex]}
+                            index={quickMeta.pivotIndex}
+                            highlights={effectiveHighlights}
+                            pointers={{}}
+                            enableLayout={indicatorMode !== 'pictorial'}
+                            isSmall={!isActive}
+                            dimmed={mergedDimIndices.has(quickMeta.pivotIndex) || quickCompareFocusDim.has(quickMeta.pivotIndex)}
+                            cellRef={(el) => {
+                              cellRefs.current.set(quickMeta.pivotIndex!, el);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Right */}
+                      <div className="rounded-xl border border-border bg-card/60 p-3 overflow-visible">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-xs font-semibold text-foreground">Right (&gt; Pivot)</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">[{Math.min(quickMeta.high, quickMeta.pivotIndex + 1)}–{quickMeta.high}]</span>
+                        </div>
+                        <div className="flex justify-center">
+                          <div className="inline-flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: '100%' }}>
+                            {Array.from({ length: Math.max(0, quickMeta.high - quickMeta.pivotIndex) }, (_, t) => quickMeta.pivotIndex! + 1 + t).map((idx) => (
+                              <ArrayCell
+                                key={`qs-right-${stepNumber}-${idx}`}
+                                value={currentArray[idx]}
+                                index={idx}
+                                highlights={effectiveHighlights}
+                                pointers={{}}
+                                enableLayout={indicatorMode !== 'pictorial'}
+                                isSmall={!isActive}
+                                dimmed={mergedDimIndices.has(idx) || quickCompareFocusDim.has(idx)}
+                                cellRef={(el) => {
+                                  cellRefs.current.set(idx, el);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Recursive steps: show only the active subarray in one simple box.
+                    <div className="rounded-xl border border-border bg-card/60 p-3 overflow-visible">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-xs font-semibold text-foreground">Active subarray</span>
+                        {quickMeta.low != null && quickMeta.high != null && (
+                          <span className="text-[10px] font-mono text-muted-foreground">[{quickMeta.low}–{quickMeta.high}]</span>
+                        )}
+                      </div>
+                      <div className="flex justify-center">
+                        <div className="inline-flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: '100%' }}>
+                          {quickMeta.low != null && quickMeta.high != null && quickMeta.low <= quickMeta.high ? (
+                            Array.from({ length: quickMeta.high - quickMeta.low + 1 }, (_, t) => quickMeta.low! + t).map((idx) => (
+                              <ArrayCell
+                                key={`qs-active-${stepNumber}-${idx}`}
+                                value={currentArray[idx]}
+                                index={idx}
+                                highlights={effectiveHighlights}
+                                pointers={{}}
+                                enableLayout={indicatorMode !== 'pictorial'}
+                                isSmall={!isActive}
+                                dimmed={mergedDimIndices.has(idx)}
+                                cellRef={(el) => {
+                                  cellRefs.current.set(idx, el);
+                                }}
+                              />
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Base case (size ≤ 1)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simple compare line (between current element and pivot) */}
+                  {isActive && showArrows && hasCompare && comparePair && compareGeometryReady && (
+                    <div
+                      key={`qs-compare-${stepNumber}-${comparePair.from}-${comparePair.to}-${phase}`}
+                      className="pointer-events-none"
+                      style={{ opacity: 1 }}
+                    >
+                      {(() => {
+                        const fromRect = indicatorGeometry.rects[comparePair.from];
+                        const toRect = indicatorGeometry.rects[comparePair.to];
+                        if (!fromRect || !toRect) return null;
+
+                        const startX = fromRect.left + fromRect.width / 2;
+                        const endX = toRect.left + toRect.width / 2;
+                        const y = 14;
+
+                        return (
+                          <svg
+                            className="absolute top-full left-0 w-full h-10 overflow-visible"
+                            aria-hidden
+                          >
+                            <defs>
+                              <marker
+                                id={`qs-arrowhead-${stepNumber}`}
+                                markerWidth="8"
+                                markerHeight="8"
+                                refX="6"
+                                refY="4"
+                                orient="auto"
+                              >
+                                <path d="M 0 0 L 8 4 L 0 8 z" fill="hsl(var(--compare))" />
+                              </marker>
+                            </defs>
+                            <line
+                              x1={startX}
+                              y1={y}
+                              x2={endX}
+                              y2={y}
+                              stroke="hsl(var(--compare))"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              markerEnd={`url(#qs-arrowhead-${stepNumber})`}
+                            />
+                          </svg>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Simple swap move (no extra effects) */}
+                  {isActive && showArrows && swapArrow && phase === 'before' && (indicatorMode !== 'pictorial' || animationsEnabled) && (
+                    <motion.div
+                      key={`qs-swap-ghost-${stepNumber}-${swapArrow.fromIndex}-${swapArrow.toIndex}`}
+                      className="pointer-events-none absolute inset-0"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      {(() => {
+                        const fromRect = measuredGeometry.rects[swapArrow.fromIndex];
+                        const toRect = measuredGeometry.rects[swapArrow.toIndex];
+                        if (!fromRect || !toRect) return null;
+
+                        const fromValue = step.before[swapArrow.fromIndex];
+                        const toValue = step.before[swapArrow.toIndex];
+
+                        // If the generator emits no arrow for i===j, skip ghost.
+                        if (swapArrow.fromIndex === swapArrow.toIndex) return null;
+
+                        return (
+                          <>
+                            <motion.div
+                              className="absolute array-cell array-cell-swap"
+                              style={{ left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height }}
+                              animate={{ left: toRect.left, top: toRect.top }}
+                              transition={{ duration: activeAnimationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                              {fromValue}
+                            </motion.div>
+                            <motion.div
+                              className="absolute array-cell array-cell-swap"
+                              style={{ left: toRect.left, top: toRect.top, width: toRect.width, height: toRect.height }}
+                              animate={{ left: fromRect.left, top: fromRect.top }}
+                              transition={{ duration: activeAnimationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                              {toValue}
+                            </motion.div>
+                          </>
+                        );
+                      })()}
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Completed pivots (faded, simple context) */}
+            {effectiveHighlights.sorted.length > 0 && (
+              <div
+                className={
+                  'rounded-xl border p-3 ' +
+                  (isFullySorted
+                    ? 'border-sorted/50 bg-sorted/10 shadow-[0_0_0_1px_hsl(var(--sorted)_/_0.12)_inset]'
+                    : 'border-border bg-card/40')
+                }
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-semibold text-foreground">Fixed (done)</span>
+                  <span className={"text-[10px] " + (isFullySorted ? 'text-sorted font-semibold' : 'text-muted-foreground')}>
+                    {isFullySorted ? 'final' : 'faded'}
+                  </span>
+                </div>
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-1 flex-wrap justify-center" style={{ maxWidth: '100%' }}>
+                    {effectiveHighlights.sorted.map((idx) => (
+                      <ArrayCell
+                        key={`qs-fixed-${stepNumber}-${idx}`}
+                        value={currentArray[idx]}
+                        index={idx}
+                        highlights={{ ...emptyHighlightsForView, sorted: [idx] }}
+                        pointers={{}}
+                        enableLayout={false}
+                        isSmall={true}
+                        dimmed={!isFullySorted}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Single array row (no duplicated before/after). Animations happen as overlays. */
+        <div
+          ref={rowRef}
+          className="relative"
+          style={{
+            // Reserve space so pointer labels above and indicators below never shift layout.
+            // When stableLayout is enabled (used by the visualizer), keep this identical across
+            // active/inactive rows so Next/Previous never causes layout reflow.
+            paddingTop: stableLayout ? 28 : isActive ? 28 : 22,
+            paddingBottom: stableLayout ? 34 : isActive ? 34 : 28,
+            minHeight: stableLayout ? 96 : isActive ? 96 : 84,
+          }}
+        >
+          <div className="flex justify-center">
+            <div
+              ref={cellsRef}
+              className={`relative inline-flex items-center gap-1 ${isActive ? 'flex-nowrap' : 'flex-wrap justify-center'}`}
+              style={{ maxWidth: '100%' }}
+            >
+            {indicatorMode === 'pictorial' ? (
+              <>
+                {currentArray.map((value, index) => (
+                  <ArrayCell
+                    key={`cell-${stepNumber}-${index}`}
+                    value={value}
+                    index={index}
+                    highlights={effectiveHighlights}
+                    pointers={effectivePointersForRow}
+                    enableLayout={false}
+                    isSmall={!isActive}
+                    dimmed={mergedDimIndices.has(index)}
+                    cellRef={(el) => {
+                      cellRefs.current.set(index, el);
+                    }}
+                  />
+                ))}
+              </>
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {currentArray.map((value, index) => (
+                  <ArrayCell
+                    key={`cell-${stepNumber}-${index}`}
+                    value={value}
+                    index={index}
+                    highlights={effectiveHighlights}
+                    pointers={effectivePointersForRow}
+                    enableLayout={true}
+                    isSmall={!isActive}
+                    dimmed={mergedDimIndices.has(index)}
+                    cellRef={(el) => {
+                      cellRefs.current.set(index, el);
+                    }}
+                  />
+                ))}
+              </AnimatePresence>
+            )}
 
           {/* Indicator overlays (below the cells) */}
           {isActive && showArrows && (
@@ -666,9 +1333,10 @@ export const StepRow: React.FC<StepRowProps> = ({
               </AnimatePresence>
             )
           )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Explanation moved to Focus mode card - no duplicate here */}
     </>
@@ -681,7 +1349,7 @@ export const StepRow: React.FC<StepRowProps> = ({
         style={{
           opacity: isActive ? 1 : isPast ? 0.7 : 0.4,
           // Keep row height stable so the pictorial indicator never resizes/jitters.
-          minHeight: 156,
+          minHeight: useMergeSortLayout ? 360 : useQuickSortLayout ? 360 : 156,
         }}
       >
         {content}

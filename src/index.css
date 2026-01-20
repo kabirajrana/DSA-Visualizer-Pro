@@ -184,7 +184,9 @@
   }
   
   .array-cell-sorted {
-    @apply bg-green-500/15 text-sorted border-2 border-sorted/60;
+    /* Final-state readability: sorted should feel like a success state, not disabled */
+    @apply bg-green-500/25 text-sorted border-2 border-sorted;
+    box-shadow: 0 0 18px hsl(var(--sorted) / 0.22);
   }
   
   .array-cell-found {

@@ -184,7 +184,10 @@ const Index: React.FC = () => {
         {/* Footer - Desktop only */}
         <footer className="hidden md:block shrink-0 border-t border-border py-3 bg-card/50">
           <div className="container mx-auto px-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <span>Created by <span className="font-semibold text-foreground">Kabiraj</span></span>
+            <span>
+              Built by{" "}
+              <span className="font-semibold text-foreground">Kabiraj Rana</span>
+            </span>
             <span>•</span>
             <span>© 2026 All Rights Reserved</span>
             <span>•</span>

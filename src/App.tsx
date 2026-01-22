@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import Index from "./pages/Index";
 import Comparison from "./pages/Comparison";
 import NotFound from "./pages/NotFound";
+import SEO from "@/components/SEO";
 import {
   InstantAlgoPulsePreloader,
   LOADER_TIMING,
@@ -16,36 +17,12 @@ import { usePWAInstall } from "./hooks/usePWAInstall";
 
 const queryClient = new QueryClient();
 
-const BASE_TITLE = "Algovx – Interactive DSA Visualizer";
 const BRAND_NAME = "Algovx";
 const TAGLINE = "Visualize & Learn Algorithms";
 
 const LOADER_TIMING_CONFIG = LOADER_TIMING;
 
-// ✅ Session-only key: shows again next visit
 const INSTALL_SESSION_KEY = "algovx_install_prompt_dismissed_session";
-
-const TitleSync = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    const path = location.pathname;
-
-    if (path === "/") {
-      document.title = `${BASE_TITLE} | Visualize & Learn Algorithms`;
-      return;
-    }
-
-    if (path === "/comparison") {
-      document.title = `Comparison – ${BASE_TITLE}`;
-      return;
-    }
-
-    document.title = `Not Found – ${BASE_TITLE}`;
-  }, [location.pathname]);
-
-  return null;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -122,8 +99,6 @@ const AppShell = () => {
 
   return (
     <>
-      <TitleSync />
-
       {/* ✅ Install suggestion UI (shows every visit, dismiss hides only for this session) */}
       <div
         style={{
@@ -233,9 +208,48 @@ const AppShell = () => {
       />
 
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/comparison" element={<Comparison />} />
-        <Route path="*" element={<NotFound />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <SEO
+                title="Algovx – Interactive DSA Visualizer | Kabiraj Rana (AI Student)"
+                description="Algovx is an interactive DSA visualizer built by Kabiraj Rana (AI & ML student). Learn sorting and searching algorithms with smooth animations and step-by-step execution."
+                canonicalPath="/"
+                ogImage="/og.png"
+              />
+              <Index />
+            </>
+          }
+        />
+        <Route
+          path="/comparison"
+          element={
+            <>
+              <SEO
+                title="Compare Sorting Algorithms Visually | Algovx"
+                description="Compare sorting algorithms visually and understand performance, swaps, and comparisons. Built for students using Algovx."
+                canonicalPath="/comparison"
+                ogImage="/og.png"
+              />
+              <Comparison />
+            </>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <>
+              <SEO
+                title="Page Not Found | Algovx"
+                noindex
+                canonicalPath={location.pathname}
+                ogImage="/og.png"
+              />
+              <NotFound />
+            </>
+          }
+        />
       </Routes>
     </>
   );

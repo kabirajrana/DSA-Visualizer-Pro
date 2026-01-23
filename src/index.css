@@ -219,6 +219,24 @@
   .code-line-active {
     @apply bg-primary/15 border-l-2 border-primary;
   }
+
+  /* Merge Sort Tree: keep diagram ultra crisp (no blur) */
+  .merge-tree-crisp svg {
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
+  }
+
+  .merge-tree-crisp {
+    filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Diagrams: force-disable blur/haze on the whole layer */
+  .diagram-no-blur,
+  .diagram-no-blur * {
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
   
   .control-btn {
     @apply p-2.5 md:p-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100;
